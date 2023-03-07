@@ -22,6 +22,7 @@ source_group ("core" FILES ${CoreFiles})
 source_group ("sources" FILES ${SourceFiles})
 
 add_executable (fuzzy-bools ${AllFiles})
+target_include_directories(fuzzy-bools PUBLIC ./deps/glm/glm/)
 
 file (GLOB TestSourceFiles test/*)
 set (TestFiles ${TestSourceFiles})
