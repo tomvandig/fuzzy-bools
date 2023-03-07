@@ -6,6 +6,7 @@
 #include <set>
 
 #include <glm.hpp>
+#include <CDT.h>
 
 #include "geometry.h"
 #include "aabb.h"
