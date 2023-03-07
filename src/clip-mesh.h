@@ -233,27 +233,21 @@ namespace fuzzybools
         return resultingMesh;
     }
 
-    static Geometry boolJoin(Geometry& mesh1, Geometry& mesh2, BVH bvh1, BVH bvh2)
+    static Geometry boolJoin(Geometry& mesh, BVH bvh1, BVH bvh2)
     {
         Geometry resultingMesh;
 
-        // clipMesh(mesh1, mesh1, bvh2, resultingMesh, true, false, false);
-        // clipMesh(mesh1, mesh1, bvh1, resultingMesh, false, true, false);
-
-        doubleClipSingleMesh2(mesh1, bvh1, bvh2, resultingMesh);
+        doubleClipSingleMesh2(mesh, bvh1, bvh2, resultingMesh);
 
         return resultingMesh;
     }
 
-    static Geometry boolSubtract(Geometry& mesh1, Geometry& mesh2, BVH bvh1, BVH bvh2)
+    static Geometry boolSubtract(Geometry& mesh, BVH bvh1, BVH bvh2)
     {
 
         Geometry resultingMesh;
 
-        // clipMesh(mesh1, mesh1, bvh2, resultingMesh, true, false, false);
-        // clipMesh(mesh1, mesh1, bvh1, resultingMesh, false, true, false);
-
-        doubleClipSingleMesh(mesh1, bvh1, bvh2, resultingMesh);
+        doubleClipSingleMesh(mesh, bvh1, bvh2, resultingMesh);
 
         return resultingMesh;
     }
