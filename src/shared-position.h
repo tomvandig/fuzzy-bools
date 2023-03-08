@@ -392,6 +392,7 @@ namespace fuzzybools
 		std::vector<std::pair<size_t, size_t>> segments;
 		std::vector<Triangle> triangles;
 		std::map<std::pair<size_t, size_t>, size_t> segmentCounts;
+		std::vector<size_t> irrelevantFaces;
 
 		std::map<size_t, std::vector<std::pair<size_t, size_t>>> planeSegments;
 		std::map<size_t, std::map<std::pair<size_t, size_t>, size_t>> planeSegmentCounts;
@@ -520,6 +521,10 @@ namespace fuzzybools
 
 		SegmentSet A;
 		SegmentSet B;
+
+		// TODO: design flaw
+		const Geometry* _linkedA;
+		const Geometry* _linkedB;
 
 		// assumes all triangleIds are connected to base with an edge and are flipped correctly
 		size_t FindUppermostTriangleId(Triangle& base, const std::vector<size_t>& triangleIds)
@@ -699,11 +704,39 @@ namespace fuzzybools
 			return p.id;
 		}
 
-		void AddGeometry(const Geometry& geom, bool isA)
+		void Construct(const Geometry& A, const Geometry& B)
+		{
+			auto boxA = A.GetAABB();
+			auto boxB = B.GetAABB();
+
+			AddGeometry(A, boxB, true);
+			AddGeometry(B, boxA, false);
+
+			_linkedA = &A;
+			_linkedB = &B;
+		}
+
+		void AddGeometry(const Geometry& geom, const AABB& relevantBounds, bool isA)
 		{
 			for (size_t i = 0; i < geom.numFaces; i++)
 			{
 				Face f = geom.GetFace(i);
+
+				auto faceBox = geom.GetFaceBox(i);
+
+				if (!faceBox.intersects(relevantBounds))
+				{
+					if (isA)
+					{
+				//		A.irrelevantFaces.push_back(i);
+					}
+					else
+					{
+					//	B.irrelevantFaces.push_back(i);
+					}
+
+					//continue;
+				}
 
 				auto a = geom.GetPoint(f.i0);
 				auto b = geom.GetPoint(f.i1);
@@ -1316,10 +1349,30 @@ namespace fuzzybools
 		Geometry geom;
 		for (auto& plane : sp.planes)
 		{
-			//	if (plane.id == 9)
-			{
-				sp.TriangulatePlane(geom, plane);
-			}
+			sp.TriangulatePlane(geom, plane);
+		}
+
+		// re-add irrelevant faces
+		for (auto& faceIndex : sp.A.irrelevantFaces)
+		{
+			const Face& f = sp._linkedA->GetFace(faceIndex);
+
+			auto a = sp._linkedA->GetPoint(f.i0);
+			auto b = sp._linkedA->GetPoint(f.i1);
+			auto c = sp._linkedA->GetPoint(f.i2);
+
+			geom.AddFace(a, b, c);
+		}
+
+		for (auto& faceIndex : sp.B.irrelevantFaces)
+		{
+			const Face& f = sp._linkedB->GetFace(faceIndex);
+
+			auto a = sp._linkedB->GetPoint(f.i0);
+			auto b = sp._linkedB->GetPoint(f.i1);
+			auto c = sp._linkedB->GetPoint(f.i2);
+
+			geom.AddFace(a, b, c);
 		}
 
 		return geom;

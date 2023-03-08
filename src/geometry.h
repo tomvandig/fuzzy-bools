@@ -32,7 +32,7 @@ namespace fuzzybools
 			AddPoint(p, n);
 		}
 
-		AABB GetAABB()
+		AABB GetAABB() const
 		{
 			AABB aabb;
 

@@ -41,51 +41,52 @@ namespace fuzzybools
         bool hasResult = bvh.IntersectRay(pt, dir, [&](uint32_t i) -> bool
             {
                 Face f = g.GetFace(i);
-        const glm::dvec3 a = g.GetPoint(f.i0);
-        const glm::dvec3 b = g.GetPoint(f.i1);
-        const glm::dvec3 c = g.GetPoint(f.i2);
+                const glm::dvec3 a = g.GetPoint(f.i0);
+                const glm::dvec3 b = g.GetPoint(f.i1);
+                const glm::dvec3 c = g.GetPoint(f.i2);
 
-        glm::dvec3 intersection;
-        double distance;
-        bool hasIntersection = intersect_ray_triangle(pt, pt + dir, a, b, c, intersection, distance, true);
-        if (hasIntersection)
-        {
-            glm::dvec3 otherNormal = computeNormal(a, b, c);
-            double d = glm::dot(otherNormal, dir);
-            double dn = glm::dot(otherNormal, normal);
-            if (std::fabs(distance) < EPS_BIG)
-            {
-                //if (dn >= 1 - EPS_BIG)
-                //{
-                //    // normals facing same direction, means an inside boundary
-                //    resultLocation = MeshLocation::BOUNDARY;
-                //    return true; // stop search
-                //}
-                //else if (dn <= -1 + EPS_BIG)
-                //{
-                //    // normals facing away, means that these touch
-                //    resultLocation = MeshLocation::OUTSIDE;
-                //    return true; // stop search
-                //}
+                glm::dvec3 intersection;
+                double distance;
+                bool hasIntersection = intersect_ray_triangle(pt, pt + dir, a, b, c, intersection, distance, true);
+                if (hasIntersection)
+                {
+                    glm::dvec3 otherNormal = computeNormal(a, b, c);
+                    double d = glm::dot(otherNormal, dir);
+                    double dn = glm::dot(otherNormal, normal);
+                    if (std::fabs(distance) < EPS_BIG)
+                    {
+                        //if (dn >= 1 - EPS_BIG)
+                        //{
+                        //    // normals facing same direction, means an inside boundary
+                        //    resultLocation = MeshLocation::BOUNDARY;
+                        //    return true; // stop search
+                        //}
+                        //else if (dn <= -1 + EPS_BIG)
+                        //{
+                        //    // normals facing away, means that these touch
+                        //    resultLocation = MeshLocation::OUTSIDE;
+                        //    return true; // stop search
+                        //}
 
-                result.loc = MeshLocation::BOUNDARY;
-                result.normal = otherNormal;
-                return true; // stop search
+                        result.loc = MeshLocation::BOUNDARY;
+                        result.normal = otherNormal;
+                        return true; // stop search
+                    }
+
+                    if (true || d >= 0)
+                    {
+                        winding++;
+                    }
+                    else
+                    {
+                        winding--;
+                    }
+                }
+
+                // continue search
+                return false;
             }
-
-            if (true || d >= 0)
-            {
-                winding++;
-            }
-            else
-            {
-                winding--;
-            }
-        }
-
-        // continue search
-        return false;
-            });
+        );
 
         if (hasResult)
         {

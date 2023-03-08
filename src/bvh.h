@@ -29,6 +29,7 @@ namespace fuzzybools
 
     struct BVH
     {
+        AABB box;
         std::vector<AABB> boxes;
         std::vector<BVHNode> nodes;
         Geometry const* ptr;
@@ -195,6 +196,7 @@ namespace fuzzybools
         for (uint32_t i = 0; i < mesh.numFaces; i++)
         {
             bvh.boxes[i] = mesh.GetFaceBox(i);
+            bvh.box.merge(bvh.boxes[i]);
         }
 
         int offset = 0;

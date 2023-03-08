@@ -65,6 +65,20 @@ namespace fuzzybools
             glm::dvec3 b = mesh.GetPoint(tri.i1);
             glm::dvec3 c = mesh.GetPoint(tri.i2);
 
+            auto aabb = mesh.GetFaceBox(i);
+
+            if (!aabb.intersects(bvh2.box))
+            {
+                // when subtracting, if box is outside the second operand, its guaranteed to remain
+                //result.AddFace(a, b, c);
+                //continue;
+            }
+            else if (!aabb.intersects(bvh1.box))
+            {
+                // when subtracting, if box is outside the first operand, it won't remain ever
+                //continue;
+            }
+
             glm::dvec3 n = computeNormal(a, b, c);
 
             glm::dvec3 triCenter = (a + b + c) * 1.0 / 3.0;
@@ -164,11 +178,6 @@ namespace fuzzybools
 
             auto isInside1 = isInside1Loc.loc;
             auto isInside2 = isInside2Loc.loc;
-
-            if (isInside2Loc.normal.y > 1.0 - EPS_BIG)
-            {
-                printf("");
-            }
 
             if (isInside1 == MeshLocation::OUTSIDE && isInside2 == MeshLocation::OUTSIDE)
             {

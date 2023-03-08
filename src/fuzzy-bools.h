@@ -9,8 +9,7 @@ namespace fuzzybools
 	Geometry Subtract(const Geometry& A, const Geometry& B)
 	{
 		fuzzybools::SharedPosition sp;
-		sp.AddGeometry(A, true);
-		sp.AddGeometry(B, false);
+		sp.Construct(A, B);
 
 		auto bvh1 = fuzzybools::MakeBVH(A);
 		auto bvh2 = fuzzybools::MakeBVH(B);
@@ -23,8 +22,7 @@ namespace fuzzybools
 	Geometry Union(const Geometry& A, const Geometry& B)
 	{
 		fuzzybools::SharedPosition sp;
-		sp.AddGeometry(A, true);
-		sp.AddGeometry(B, false);
+		sp.Construct(A, B);
 
 		auto bvh1 = fuzzybools::MakeBVH(A);
 		auto bvh2 = fuzzybools::MakeBVH(B);
