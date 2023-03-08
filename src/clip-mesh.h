@@ -223,17 +223,7 @@ namespace fuzzybools
         }
     }
 
-    static Geometry boolIntersect(Geometry& mesh1, Geometry& mesh2, BVH bvh1, BVH bvh2)
-    {
-        Geometry resultingMesh;
-
-        clipMesh(mesh1, mesh2, bvh2, resultingMesh, false, false, true);
-        clipMesh(mesh2, mesh1, bvh1, resultingMesh, false, false, false);
-
-        return resultingMesh;
-    }
-
-    static Geometry boolJoin(Geometry& mesh, BVH bvh1, BVH bvh2)
+    static Geometry clipJoin(Geometry& mesh, BVH bvh1, BVH bvh2)
     {
         Geometry resultingMesh;
 
@@ -242,23 +232,12 @@ namespace fuzzybools
         return resultingMesh;
     }
 
-    static Geometry boolSubtract(Geometry& mesh, BVH bvh1, BVH bvh2)
+    static Geometry clipSubtract(Geometry& mesh, BVH bvh1, BVH bvh2)
     {
 
         Geometry resultingMesh;
 
         doubleClipSingleMesh(mesh, bvh1, bvh2, resultingMesh);
-
-        return resultingMesh;
-    }
-
-    // TODO: I don't think XOR works right now...
-    static Geometry boolXOR(Geometry& mesh1, Geometry& mesh2, BVH bvh1, BVH bvh2)
-    {
-        Geometry resultingMesh;
-
-        clipMesh(mesh1, mesh2, bvh2, resultingMesh, true, false, false);
-        clipMesh(mesh2, mesh1, bvh1, resultingMesh, true, false, false);
 
         return resultingMesh;
     }
