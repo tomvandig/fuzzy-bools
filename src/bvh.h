@@ -199,7 +199,7 @@ namespace fuzzybools
 
         int offset = 0;
         // start BVH at Y axis
-        MakeBVH(bvh.boxes, bvh.nodes, 0, bvh.boxes.size(), 1, 0, offset);
+        MakeBVH(bvh.boxes, bvh.nodes, 0, static_cast<int>(bvh.boxes.size()), 1, 0, offset);
 
         return bvh;
     }

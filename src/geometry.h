@@ -118,7 +118,7 @@ namespace fuzzybools
 			numFaces++;
 		}
 
-		inline Face GetFace(uint32_t index) const
+		inline Face GetFace(size_t index) const
 		{
 			Face f;
 			f.i0 = indexData[index * 3 + 0];
@@ -127,10 +127,10 @@ namespace fuzzybools
 			return f;
 		}
 
-		inline AABB GetFaceBox(uint32_t index) const
+		inline AABB GetFaceBox(size_t index) const
 		{
 			AABB aabb;
-			aabb.index = index;
+			aabb.index = static_cast<uint32_t>(index);
 
 			glm::dvec3 a = GetPoint(indexData[index * 3 + 0]);
 			glm::dvec3 b = GetPoint(indexData[index * 3 + 1]);
@@ -149,7 +149,7 @@ namespace fuzzybools
 			return aabb;
 		}
 
-		inline glm::dvec3 GetPoint(uint32_t index) const
+		inline glm::dvec3 GetPoint(size_t index) const
 		{
 			return glm::dvec3(
 				vertexData[index * VERTEX_FORMAT_SIZE_FLOATS + 0],
@@ -225,51 +225,7 @@ namespace fuzzybools
 
 			return newGeom;
 		}
-
-		uint32_t GetVertexData()
-		{
-			// unfortunately webgl can't do doubles
-			if (fvertexData.size() != vertexData.size())
-			{
-				fvertexData.resize(vertexData.size());
-				for (size_t i = 0; i < vertexData.size(); i += 6)
-				{
-					fvertexData[i + 0] = vertexData[i + 0];
-					fvertexData[i + 1] = vertexData[i + 1];
-					fvertexData[i + 2] = vertexData[i + 2];
-
-					fvertexData[i + 3] = vertexData[i + 3];
-					fvertexData[i + 4] = vertexData[i + 4];
-					fvertexData[i + 5] = vertexData[i + 5];
-				}
-
-				// cleanup
-				// vertexData = {};
-			}
-
-			if (fvertexData.empty())
-			{
-				return 0;
-			}
-
-			return (uint32_t)&fvertexData[0];
-		}
-
-		uint32_t GetVertexDataSize()
-		{
-			return (uint32_t)fvertexData.size();
-		}
-
-		uint32_t GetIndexData()
-		{
-			return (uint32_t)&indexData[0];
-		}
-
-		uint32_t GetIndexDataSize()
-		{
-			return (uint32_t)indexData.size();
-		}
-
+		
 		bool IsEmpty()
 		{
 			return vertexData.empty();

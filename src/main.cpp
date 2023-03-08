@@ -14,7 +14,7 @@ int main()
 	auto bvh1 = fuzzybools::MakeBVH(geom1);
 	auto bvh2 = fuzzybools::MakeBVH(geom2);
 
-	auto geom = sp.Normalize();
+	auto geom = Normalize(sp);
 
 	fuzzybools::boolJoin(geom, bvh1, bvh2);
 }

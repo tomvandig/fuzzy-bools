@@ -6,13 +6,18 @@
 #include <set>
 
 #include <glm.hpp>
+
+#pragma warning( push )
+#pragma warning( disable : 4267)
 #include <CDT.h>
+#pragma warning( pop )
 
 #include "geometry.h"
 #include "aabb.h"
 #include "bvh.h"
 #include "util.h"
 #include "svg.h"
+#include "math.h"
 
 namespace fuzzybools
 {
@@ -172,8 +177,6 @@ namespace fuzzybools
 		std::vector<ReferencePlane> planes;
 	};
 
-	struct SharedPosition;
-
 	struct Plane
 	{
 		size_t id;
@@ -183,132 +186,17 @@ namespace fuzzybools
 
 		std::vector<Line> lines;
 		AABB aabb;
-		SharedPosition* _sp;
 
 		void AddPoint(const glm::dvec3& pt)
 		{
 			aabb.merge(pt);
 		}
 
-		Plane(SharedPosition* sp) :
-			_sp(sp)
+		Plane()
 		{
 			static size_t idcounter = 0;
 			idcounter++;
 			globalID = idcounter;
-		}
-
-		void AddSegments(Line& templine, const std::vector<std::pair<double, double>>& segments)
-		{
-			// NOTE: this is a design flaw, the addline may return a line that is
-			// EQUIVALENT BUT NOT IDENTICAL
-			// hence line distances mentioned in "segments" DO apply to templine
-			// but not necessary (but possibly) to isectLineId
-			auto isectLineId = AddLine(templine.origin, templine.direction);
-
-			auto& isectLine = lines[isectLineId.first];
-
-			if (!IsPointOnPlane(isectLine.origin) || !IsPointOnPlane(isectLine.origin + isectLine.direction * 100.))
-			{
-				printf("Bad isect line");
-			}
-
-			for (auto& seg : segments)
-			{
-				auto pos = templine.GetPosOnLine(seg.first);
-
-				if (!aabb.contains(pos))
-				{
-					printf("making pos outside");
-				}
-
-				size_t ptA = _sp->AddPoint(pos);
-				size_t ptB = _sp->AddPoint(templine.GetPosOnLine(seg.second));
-
-				if (!this->aabb.contains(_sp->points[ptA].location3D))
-				{
-					printf("bad points");
-				}
-				if (!this->aabb.contains(_sp->points[ptB].location3D))
-				{
-					printf("bad points");
-				}
-
-				//if (ptA != ptB)
-				{
-					isectLine.AddPointToLine(isectLine.GetPosOnLine(_sp->points[ptA].location3D), ptA);
-					isectLine.AddPointToLine(isectLine.GetPosOnLine(_sp->points[ptB].location3D), ptB);
-				}
-
-				if (!IsPointOnPlane(_sp->points[ptA].location3D))
-				{
-					printf("bad point");
-				}
-				if (!IsPointOnPlane(_sp->points[ptB].location3D))
-				{
-					printf("bad point");
-				}
-
-
-				_sp->AddRefPlaneToPoint(ptA, id);
-				_sp->AddRefPlaneToPoint(ptB, id);
-			}
-		}
-
-		std::vector<double> ComputeInitialIntersections(const Line& lineA) const
-		{
-			double size = 10000; // TODO: this is bad
-			auto Astart = lineA.origin + lineA.direction * size;
-			auto Aend = lineA.origin - lineA.direction * size;
-
-			std::vector<double> distances;
-
-			// line B is expected to have the segments already filled, line A is not
-			for (auto& line : lines)
-			{
-				// skip colinear
-				if (lineA.IsColinear(line)) continue;
-
-				for (const auto& seg : line.GetSegments())
-				{
-					auto result = LineLineIntersection(Astart, Aend,
-						_sp->points[seg.first].location3D, _sp->points[seg.second].location3D);
-
-					if (result.distance < SCALED_EPS_BIG)
-					{
-						if (!this->aabb.contains(_sp->points[seg.first].location3D))
-						{
-							printf("bad points");
-						}
-						if (!this->aabb.contains(_sp->points[seg.second].location3D))
-						{
-							printf("bad points");
-						}
-
-						// intersection, mark index of line B and distance on line A
-						distances.emplace_back(lineA.GetPosOnLine(result.point2));
-						auto pt = lineA.GetPosOnLine(distances[distances.size() - 1]);
-
-						if (!this->aabb.contains(result.point2))
-						{
-							printf("bad points");
-						}
-
-						if (!equals(pt, result.point2, SCALED_EPS_BIG))
-						{
-							printf("BAD POINT");
-						}
-					}
-				}
-			}
-
-			std::sort(distances.begin(), distances.end(), [&](const double& left, const double& right) {
-				return left < right;
-				});
-
-			distances.erase(std::unique(distances.begin(), distances.end()), distances.end());
-
-			return distances;
 		}
 
 		double round(double input)
@@ -350,11 +238,11 @@ namespace fuzzybools
 				printf("bad point");
 			}
 
-			if (!this->aabb.contains(a.location3D))
+			if (!aabb.contains(a.location3D))
 			{
 				printf("bad points");
 			}
-			if (!this->aabb.contains(b.location3D))
+			if (!aabb.contains(b.location3D))
 			{
 				printf("bad points");
 			}
@@ -404,78 +292,6 @@ namespace fuzzybools
 		bool HasOverlap(const std::pair<size_t, size_t>& A, const std::pair<size_t, size_t>& B)
 		{
 			return (A.first == B.first || A.first == B.second || A.second == B.first || A.second == B.second);
-		}
-
-		void AddLineLineIntersections(Line& lineA, Line& lineB)
-		{
-			for (auto& segA : lineA.GetSegments())
-			{
-				for (auto& segB : lineB.GetSegments())
-				{
-					// check isect A vs B
-					if (!HasOverlap(segA, segB))
-					{
-						// no overlap, possibility of intersection
-						auto result = LineLineIntersection(_sp->points[segA.first].location3D, _sp->points[segA.second].location3D,
-							_sp->points[segB.first].location3D, _sp->points[segB.second].location3D);
-
-						if (result.distance < SCALED_EPS_BIG)
-						{
-							// intersection! Take center and insert
-							if (!this->aabb.contains(result.point1))
-							{
-								printf("bad points");
-								continue;
-							}
-
-							size_t point = _sp->AddPoint((result.point1));
-
-
-							lineA.AddPointToLine(lineA.GetPosOnLine(_sp->points[point].location3D), point);
-							lineB.AddPointToLine(lineB.GetPosOnLine(_sp->points[point].location3D), point);
-
-							// point falls on intersection of two lines, so is part of those lines and all planes of those lines
-							{
-								ReferenceLine ref;
-								ref.pointID = point;
-								ref.lineID = lineA.id;
-								ref.location = lineA.GetPosOnLine(result.point1);
-								_sp->points[point].lines.push_back(ref);
-
-								// TODO: FIX THIS POINT MIGHT NOT BE ON THE PLANE ACTUALLY
-
-								for (auto& plane : lineA.planes)
-								{
-									_sp->AddRefPlaneToPoint(point, plane.planeID);
-								}
-							}
-							{
-								ReferenceLine ref;
-								ref.pointID = point;
-								ref.lineID = lineB.id;
-								ref.location = lineB.GetPosOnLine(result.point2);
-								_sp->points[point].lines.push_back(ref);
-
-								for (auto& plane : lineB.planes)
-								{
-									_sp->AddRefPlaneToPoint(point, plane.planeID);
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-
-		void AddLineLineIsects()
-		{
-			for (size_t lineAIndex = 0; lineAIndex < lines.size(); lineAIndex++)
-			{
-				for (size_t lineBIndex = lineAIndex + 1; lineBIndex < lines.size(); lineBIndex++)
-				{
-					AddLineLineIntersections(lines[lineAIndex], lines[lineBIndex]);
-				}
-			}
 		}
 
 		void PutPointOnLines(Point& p)
@@ -730,7 +546,7 @@ namespace fuzzybools
 
 				auto dot = (glm::dot(baseNorm, triNorm) + 1) / 2.0; // range dot from 0 to 1, positive for above, negative for below
 
-				if (above == BELOW)
+				if (above == TriangleVsPoint::BELOW)
 				{
 					dot = dot - 1;
 				}
@@ -766,7 +582,7 @@ namespace fuzzybools
 			return pointID;
 		}
 
-		enum TriangleVsPoint
+		enum class TriangleVsPoint
 		{
 			ABOVE,
 			BELOW,
@@ -780,9 +596,9 @@ namespace fuzzybools
 			auto dpt3d = points[point].location3D - points[T.a].location3D;
 			auto dot = glm::dot(norm, dpt3d);
 
-			if (std::fabs(dot) < EPS_BIG) return ON;
-			if (dot > 0) return ABOVE;
-			return BELOW;
+			if (std::fabs(dot) < EPS_BIG) return TriangleVsPoint::ON;
+			if (dot > 0) return TriangleVsPoint::ABOVE;
+			return TriangleVsPoint::BELOW;
 		}
 
 		// simplify, see FindUppermostTriangleId
@@ -810,18 +626,18 @@ namespace fuzzybools
 			auto A = T.GetNotShared(neighbour);
 			auto E = neighbour.GetNotShared(T);
 
-			bool EvsT = CalcTriPt(T, E);
-			bool AvsN = CalcTriPt(neighbour, E);
+			TriangleVsPoint EvsT = CalcTriPt(T, E);
+			TriangleVsPoint AvsN = CalcTriPt(neighbour, E);
 
-			if (EvsT == ABOVE && AvsN != ABOVE)
+			if (EvsT == TriangleVsPoint::ABOVE && AvsN != TriangleVsPoint::ABOVE)
 			{
 				return true;
 			}
-			else if (EvsT == BELOW && AvsN != BELOW)
+			else if (EvsT == TriangleVsPoint::BELOW && AvsN != TriangleVsPoint::BELOW)
 			{
 				return true;
 			}
-			else if (EvsT == ON && AvsN != ON)
+			else if (EvsT == TriangleVsPoint::ON && AvsN != TriangleVsPoint::ON)
 			{
 				return true;
 			}
@@ -873,7 +689,7 @@ namespace fuzzybools
 				}
 			}
 
-			Plane p(this);
+			Plane p;
 			p.id = planes.size();
 			p.normal = normal;
 			p.distance = d;
@@ -1131,7 +947,7 @@ namespace fuzzybools
 
 			for (auto& edge : edges)
 			{
-				cdt_edges.emplace_back(edge.first, edge.second);
+				cdt_edges.emplace_back((uint32_t)edge.first, (uint32_t)edge.second);
 			}
 
 			auto mapping = CDT::RemoveDuplicatesAndRemapEdges(cdt_verts, cdt_edges).mapping;
@@ -1169,157 +985,343 @@ namespace fuzzybools
 			points[point].planes.push_back(ref);
 			planeToPoints[plane].push_back(point);
 		}
-
-		Geometry Normalize()
-		{
-			// construct all contours, derive lines
-			auto contoursA = A.GetContourSegments();
-
-			for (auto& [planeId, contours] : contoursA)
-			{
-				std::vector<std::vector<glm::dvec2>> edges;
-
-				Plane& p = planes[planeId];
-
-				if (false)
-				{
-					auto basis = p.MakeBasis();
-
-					for (auto& segment : contours)
-					{
-						edges.push_back({ basis.project(points[segment.first].location3D), basis.project(points[segment.second].location3D) });
-					}
-
-					DumpSVGLines(edges, L"contour.html");
-				}
-
-				for (auto& segment : contours)
-				{
-					auto lineId = planes[planeId].AddLine(points[segment.first], points[segment.second]);
-				}
-			}
-
-			auto contoursB = B.GetContourSegments();
-
-			for (auto& [planeId, contours] : contoursB)
-			{
-				for (auto& segment : contours)
-				{
-					auto lineId = planes[planeId].AddLine(points[segment.first], points[segment.second]);
-				}
-			}
-
-			// put all points on lines/planes
-			for (auto& p : points)
-			{
-				for (auto& plane : planes)
-				{
-					if (plane.IsPointOnPlane(p.location3D))
-					{
-						AddRefPlaneToPoint(p.id, plane.id);
-						plane.PutPointOnLines(p);
-					}
-				}
-			}
-
-			for (auto& plane : planes)
-			{
-				plane.AddLineLineIsects();
-			}
-
-			if (true)
-			{
-				// intersect planes
-				for (size_t planeAIndex = 0; planeAIndex < planes.size(); planeAIndex++)
-				{
-					for (size_t planeBIndex = 0; planeBIndex < planes.size(); planeBIndex++)
-					{
-						auto& planeA = planes[planeAIndex];
-						auto& planeB = planes[planeBIndex];
-
-						if (!planeA.aabb.intersects(planeB.aabb))
-						{
-							continue;
-						}
-
-						// plane intersect results in new lines
-						// new lines result in new line intersects
-						// new line intersects result in new points
-
-						if (std::fabs(glm::dot(planeA.normal, planeB.normal)) > 1.0 - EPS_BIG)
-						{
-							// parallel planes, don't care
-							continue;
-						}
-
-						// calculate plane intersection line
-						auto result = PlanePlaneIsect(planeA.normal, planeA.distance, planeB.normal, planeB.distance);
-
-						// TODO: invalid temp line object
-						Line intersectionLine;
-						intersectionLine.origin = result.pos;
-						intersectionLine.direction = result.dir;
-
-						if (!planeA.IsPointOnPlane(intersectionLine.origin) || !planeA.IsPointOnPlane(intersectionLine.origin + intersectionLine.direction * 1000.))
-						{
-							printf("Bad isect line");
-						}
-						if (!planeB.IsPointOnPlane(intersectionLine.origin) || !planeB.IsPointOnPlane(intersectionLine.origin + intersectionLine.direction * 1000.))
-						{
-							printf("Bad isect line");
-						}
-
-						// get all intersection points with the shared line and both planes
-						auto isectA = planeA.ComputeInitialIntersections(intersectionLine);
-						auto isectB = planeB.ComputeInitialIntersections(intersectionLine);
-
-						// from these, figure out the shared segments on the current line produced by these two planes
-						auto segments = BuildSegments(isectA, isectB);
-
-						if (segments.empty())
-						{
-							// nothing resulted from this plane-plane intersection
-							continue;
-						}
-						else
-						{
-							planeA.AddSegments(intersectionLine, segments);
-							planeB.AddSegments(intersectionLine, segments);
-						}
-					}
-				}
-			}
-
-			for (auto& plane : planes)
-			{
-				plane.AddLineLineIsects();
-			}
-
-			for (auto& p : points)
-			{
-				for (auto& plane : planes)
-				{
-					if (plane.IsPointOnPlane(p.location3D))
-					{
-						AddRefPlaneToPoint(p.id, plane.id);
-					}
-				}
-			}
-
-			// from the inserted geometries, all lines planes and points are now merged into a single set of shared planes lines and points
-			// from this starting point, we can triangulate all planes and obtain the triangulation of the intersected set of geometries
-			// this mesh itself is not a boolean result, but rather a merging of all operands
-
-			Geometry geom;
-			for (auto& plane : planes)
-			{
-				//	if (plane.id == 9)
-				{
-					TriangulatePlane(geom, plane);
-				}
-			}
-
-			return geom;
-		}
 	};
+
+
+	void AddSegments(Plane& p, SharedPosition& sp, Line& templine, const std::vector<std::pair<double, double>>& segments)
+	{
+		// NOTE: this is a design flaw, the addline may return a line that is
+		// EQUIVALENT BUT NOT IDENTICAL
+		// hence line distances mentioned in "segments" DO apply to templine
+		// but not necessary (but possibly) to isectLineId
+		auto isectLineId = p.AddLine(templine.origin, templine.direction);
+
+		auto& isectLine = p.lines[isectLineId.first];
+
+		if (!p.IsPointOnPlane(isectLine.origin) || !p.IsPointOnPlane(isectLine.origin + isectLine.direction * 100.))
+		{
+			printf("Bad isect line");
+		}
+
+		for (auto& seg : segments)
+		{
+			auto pos = templine.GetPosOnLine(seg.first);
+
+			if (!p.aabb.contains(pos))
+			{
+				printf("making pos outside");
+			}
+
+			size_t ptA = sp.AddPoint(pos);
+			size_t ptB = sp.AddPoint(templine.GetPosOnLine(seg.second));
+
+			if (!p.aabb.contains(sp.points[ptA].location3D))
+			{
+				printf("bad points");
+			}
+			if (!p.aabb.contains(sp.points[ptB].location3D))
+			{
+				printf("bad points");
+			}
+
+			//if (ptA != ptB)
+			{
+				isectLine.AddPointToLine(isectLine.GetPosOnLine(sp.points[ptA].location3D), ptA);
+				isectLine.AddPointToLine(isectLine.GetPosOnLine(sp.points[ptB].location3D), ptB);
+			}
+
+			if (!p.IsPointOnPlane(sp.points[ptA].location3D))
+			{
+				printf("bad point");
+			}
+			if (!p.IsPointOnPlane(sp.points[ptB].location3D))
+			{
+				printf("bad point");
+			}
+
+
+			sp.AddRefPlaneToPoint(ptA, p.id);
+			sp.AddRefPlaneToPoint(ptB, p.id);
+		}
+	}
+
+	std::vector<double> ComputeInitialIntersections(Plane& p, SharedPosition& sp, const Line& lineA)
+	{
+		double size = 10000; // TODO: this is bad
+		auto Astart = lineA.origin + lineA.direction * size;
+		auto Aend = lineA.origin - lineA.direction * size;
+
+		std::vector<double> distances;
+
+		// line B is expected to have the segments already filled, line A is not
+		for (auto& line : p.lines)
+		{
+			// skip colinear
+			if (lineA.IsColinear(line)) continue;
+
+			for (const auto& seg : line.GetSegments())
+			{
+				auto result = LineLineIntersection(Astart, Aend,
+					sp.points[seg.first].location3D, sp.points[seg.second].location3D);
+
+				if (result.distance < SCALED_EPS_BIG)
+				{
+					if (!p.aabb.contains(sp.points[seg.first].location3D))
+					{
+						printf("bad points");
+					}
+					if (!p.aabb.contains(sp.points[seg.second].location3D))
+					{
+						printf("bad points");
+					}
+
+					// intersection, mark index of line B and distance on line A
+					distances.emplace_back(lineA.GetPosOnLine(result.point2));
+					auto pt = lineA.GetPosOnLine(distances[distances.size() - 1]);
+
+					if (!p.aabb.contains(result.point2))
+					{
+						printf("bad points");
+					}
+
+					if (!equals(pt, result.point2, SCALED_EPS_BIG))
+					{
+						printf("BAD POINT");
+					}
+				}
+			}
+		}
+
+		std::sort(distances.begin(), distances.end(), [&](const double& left, const double& right) {
+			return left < right;
+			});
+
+		distances.erase(std::unique(distances.begin(), distances.end()), distances.end());
+
+		return distances;
+	}
+
+	void AddLineLineIntersections(Plane& p, SharedPosition& sp, Line& lineA, Line& lineB)
+	{
+		for (auto& segA : lineA.GetSegments())
+		{
+			for (auto& segB : lineB.GetSegments())
+			{
+				// check isect A vs B
+				if (!p.HasOverlap(segA, segB))
+				{
+					// no overlap, possibility of intersection
+					auto result = LineLineIntersection(sp.points[segA.first].location3D, sp.points[segA.second].location3D,
+						sp.points[segB.first].location3D, sp.points[segB.second].location3D);
+
+					if (result.distance < SCALED_EPS_BIG)
+					{
+						// intersection! Take center and insert
+						if (!p.aabb.contains(result.point1))
+						{
+							printf("bad points");
+							continue;
+						}
+
+						size_t point = sp.AddPoint((result.point1));
+
+
+						lineA.AddPointToLine(lineA.GetPosOnLine(sp.points[point].location3D), point);
+						lineB.AddPointToLine(lineB.GetPosOnLine(sp.points[point].location3D), point);
+
+						// point falls on intersection of two lines, so is part of those lines and all planes of those lines
+						{
+							ReferenceLine ref;
+							ref.pointID = point;
+							ref.lineID = lineA.id;
+							ref.location = lineA.GetPosOnLine(result.point1);
+							sp.points[point].lines.push_back(ref);
+
+							// TODO: FIX THIS POINT MIGHT NOT BE ON THE PLANE ACTUALLY
+
+							for (auto& plane : lineA.planes)
+							{
+								sp.AddRefPlaneToPoint(point, plane.planeID);
+							}
+						}
+						{
+							ReferenceLine ref;
+							ref.pointID = point;
+							ref.lineID = lineB.id;
+							ref.location = lineB.GetPosOnLine(result.point2);
+							sp.points[point].lines.push_back(ref);
+
+							for (auto& plane : lineB.planes)
+							{
+								sp.AddRefPlaneToPoint(point, plane.planeID);
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	void AddLineLineIsects(Plane& p, SharedPosition& sp)
+	{
+		for (size_t lineAIndex = 0; lineAIndex < p.lines.size(); lineAIndex++)
+		{
+			for (size_t lineBIndex = lineAIndex + 1; lineBIndex < p.lines.size(); lineBIndex++)
+			{
+				AddLineLineIntersections(p, sp, p.lines[lineAIndex], p.lines[lineBIndex]);
+			}
+		}
+	}
+
+	Geometry Normalize(SharedPosition& sp)
+	{
+		// construct all contours, derive lines
+		auto contoursA = sp.A.GetContourSegments();
+
+		for (auto& [planeId, contours] : contoursA)
+		{
+			std::vector<std::vector<glm::dvec2>> edges;
+
+			Plane& p = sp.planes[planeId];
+
+			if (false)
+			{
+				auto basis = p.MakeBasis();
+
+				for (auto& segment : contours)
+				{
+					edges.push_back({ basis.project(sp.points[segment.first].location3D), basis.project(sp.points[segment.second].location3D) });
+				}
+
+				DumpSVGLines(edges, L"contour.html");
+			}
+
+			for (auto& segment : contours)
+			{
+				auto lineId = sp.planes[planeId].AddLine(sp.points[segment.first], sp.points[segment.second]);
+			}
+		}
+
+		auto contoursB = sp.B.GetContourSegments();
+
+		for (auto& [planeId, contours] : contoursB)
+		{
+			for (auto& segment : contours)
+			{
+				auto lineId = sp.planes[planeId].AddLine(sp.points[segment.first], sp.points[segment.second]);
+			}
+		}
+
+		// put all points on lines/planes
+		for (auto& p : sp.points)
+		{
+			for (auto& plane : sp.planes)
+			{
+				if (plane.IsPointOnPlane(p.location3D))
+				{
+					sp.AddRefPlaneToPoint(p.id, plane.id);
+					plane.PutPointOnLines(p);
+				}
+			}
+		}
+
+		for (auto& plane : sp.planes)
+		{
+			AddLineLineIsects(plane, sp);
+		}
+
+		if (true)
+		{
+			// intersect planes
+			for (size_t planeAIndex = 0; planeAIndex < sp.planes.size(); planeAIndex++)
+			{
+				for (size_t planeBIndex = 0; planeBIndex < sp.planes.size(); planeBIndex++)
+				{
+					auto& planeA = sp.planes[planeAIndex];
+					auto& planeB = sp.planes[planeBIndex];
+
+					if (!planeA.aabb.intersects(planeB.aabb))
+					{
+						continue;
+					}
+
+					// plane intersect results in new lines
+					// new lines result in new line intersects
+					// new line intersects result in new points
+
+					if (std::fabs(glm::dot(planeA.normal, planeB.normal)) > 1.0 - EPS_BIG)
+					{
+						// parallel planes, don't care
+						continue;
+					}
+
+					// calculate plane intersection line
+					auto result = PlanePlaneIsect(planeA.normal, planeA.distance, planeB.normal, planeB.distance);
+
+					// TODO: invalid temp line object
+					Line intersectionLine;
+					intersectionLine.origin = result.pos;
+					intersectionLine.direction = result.dir;
+
+					if (!planeA.IsPointOnPlane(intersectionLine.origin) || !planeA.IsPointOnPlane(intersectionLine.origin + intersectionLine.direction * 1000.))
+					{
+						printf("Bad isect line");
+					}
+					if (!planeB.IsPointOnPlane(intersectionLine.origin) || !planeB.IsPointOnPlane(intersectionLine.origin + intersectionLine.direction * 1000.))
+					{
+						printf("Bad isect line");
+					}
+
+					// get all intersection points with the shared line and both planes
+					auto isectA = ComputeInitialIntersections(planeA, sp, intersectionLine);
+					auto isectB = ComputeInitialIntersections(planeB, sp, intersectionLine);
+
+					// from these, figure out the shared segments on the current line produced by these two planes
+					auto segments = sp.BuildSegments(isectA, isectB);
+
+					if (segments.empty())
+					{
+						// nothing resulted from this plane-plane intersection
+						continue;
+					}
+					else
+					{
+						AddSegments(planeA, sp, intersectionLine, segments);
+						AddSegments(planeB, sp, intersectionLine, segments);
+					}
+				}
+			}
+		}
+
+		for (auto& plane : sp.planes)
+		{
+			AddLineLineIsects(plane, sp);
+		}
+
+		for (auto& p : sp.points)
+		{
+			for (auto& plane : sp.planes)
+			{
+				if (plane.IsPointOnPlane(p.location3D))
+				{
+					sp.AddRefPlaneToPoint(p.id, plane.id);
+				}
+			}
+		}
+
+		// from the inserted geometries, all lines planes and points are now merged into a single set of shared planes lines and points
+		// from this starting point, we can triangulate all planes and obtain the triangulation of the intersected set of geometries
+		// this mesh itself is not a boolean result, but rather a merging of all operands
+
+		Geometry geom;
+		for (auto& plane : sp.planes)
+		{
+			//	if (plane.id == 9)
+			{
+				sp.TriangulatePlane(geom, plane);
+			}
+		}
+
+		return geom;
+	}
 }

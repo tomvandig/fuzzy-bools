@@ -923,7 +923,7 @@ RemapEdges(std::vector<Edge>& edges, const std::vector<std::size_t>& mapping)
 {
     for(std::vector<Edge>::iterator it = edges.begin(); it != edges.end(); ++it)
     {
-        *it = Edge(mapping[it->v1()], mapping[it->v2()]); // remap
+        *it = Edge((CDT::VertInd)mapping[it->v1()], (CDT::VertInd)mapping[it->v2()]); // remap
     }
 }
 
