@@ -91,6 +91,10 @@ namespace fuzzybools
 		return (p.x - b.x) * (a.y - b.y) - (a.x - b.x) * (p.y - b.y);
 	}
 
+	static double cross2d(const glm::dvec2& point1, const glm::dvec2& point2) {
+		return point1.x * point2.y - point1.y * point2.x;
+	}
+
 	// https://stackoverflow.com/questions/1903954/is-there-a-standard-sign-function-signum-sgn-in-c-c
 	static double signOneZero(double x)
 	{
@@ -102,6 +106,71 @@ namespace fuzzybools
 		double upDown = sign2D(p, a, b) >= 0 ? 1 : -1;
 		double dot = (1 + glm::dot(glm::normalize(a - b), glm::normalize(p - b))) / 2.0;
 		return upDown * dot;
+	}
+
+	static bool allEqual(bool b1, bool b2, bool b3, bool b4)
+	{
+		return b1 == b2 && b1 == b3 && b1 == b4;
+	}
+
+	struct LineLineIsect2D
+	{
+		bool isect = false;
+		glm::dvec2 pt;
+		double dist;
+	};
+
+	static LineLineIsect2D doLineSegmentsIntersect(const glm::dvec2& p, const glm::dvec2& p2, const glm::dvec2& q, const glm::dvec2& q2, double eps) 
+	{
+		LineLineIsect2D result;
+
+		glm::dvec2 r = p2 - p;
+		glm::dvec2 s = q2 - q;
+
+		double uNumerator = cross2d(q - p, r);
+		double denominator = cross2d(r, s);
+
+		if (uNumerator == 0 && denominator == 0) {
+			// They are coLlinear
+
+			// Do they touch? (Are any of the points equal?)
+			if (equals2d(p, q, eps) || equals2d(p, q2, eps) || equals2d(p2, q, eps) || equals2d(p2, q2, eps))
+			{
+				result.isect = true;
+
+				return result;
+			}
+
+			// Do they overlap? (Are all the point differences in either direction the same sign)
+			result.isect = !allEqual(
+				(q.x - p.x < 0),
+				(q.x - p2.x < 0),
+				(q2.x - p.x < 0),
+				(q2.x - p2.x < 0)) ||
+				!allEqual(
+					(q.y - p.y < 0),
+					(q.y - p2.y < 0),
+					(q2.y - p.y < 0),
+					(q2.y - p2.y < 0));
+
+			return result;
+		}
+
+		if (denominator == 0) {
+			// lines are paralell
+			result.isect = false;
+			
+			return result;
+		}
+
+		double u = uNumerator / denominator;
+		double t = cross2d(q - p, s) / denominator;
+
+		result.isect = (t >= -eps) && (t <= 1 + eps) && (u >= -eps) && (u <= 1 + eps);
+		result.pt = p + r * t;
+		result.dist = glm::distance(p, result.pt);
+
+		return result;
 	}
 
 	struct LineLineIsect
@@ -414,10 +483,6 @@ namespace fuzzybools
 		}
 
 		return sum < 0;
-	}
-
-	static double cross2d(const glm::dvec2& point1, const glm::dvec2& point2) {
-		return point1.x * point2.y - point1.y * point2.x;
 	}
 
 	static double areaOfTriangle(glm::dvec2 a, glm::dvec2 b, glm::dvec2 c)

@@ -18,6 +18,9 @@
 #include "util.h"
 #include "svg.h"
 #include "math.h"
+#include "loop-finder.h"
+#include "obj-exporter.h"
+#include "is-inside-mesh.h"
 
 namespace fuzzybools
 {
@@ -526,6 +529,12 @@ namespace fuzzybools
 		const Geometry* _linkedA;
 		const Geometry* _linkedB;
 
+		Geometry relevantA;
+		Geometry relevantB;
+
+		BVH relevantBVHA;
+		BVH relevantBVHB;
+
 		// assumes all triangleIds are connected to base with an edge and are flipped correctly
 		size_t FindUppermostTriangleId(Triangle& base, const std::vector<size_t>& triangleIds)
 		{
@@ -718,6 +727,8 @@ namespace fuzzybools
 
 		void AddGeometry(const Geometry& geom, const AABB& relevantBounds, bool isA)
 		{
+			Geometry relevant;
+
 			for (size_t i = 0; i < geom.numFaces; i++)
 			{
 				Face f = geom.GetFace(i);
@@ -728,19 +739,21 @@ namespace fuzzybools
 				{
 					if (isA)
 					{
-				//		A.irrelevantFaces.push_back(i);
+						A.irrelevantFaces.push_back(i);
 					}
 					else
 					{
-					//	B.irrelevantFaces.push_back(i);
+						B.irrelevantFaces.push_back(i);
 					}
 
-					//continue;
+					continue;
 				}
 
 				auto a = geom.GetPoint(f.i0);
 				auto b = geom.GetPoint(f.i1);
 				auto c = geom.GetPoint(f.i2);
+
+				relevant.AddFace(a, b, c);
 
 				glm::dvec3 norm;
 				if (computeSafeNormal(a, b, c, norm, EPS_SMALL))
@@ -774,16 +787,29 @@ namespace fuzzybools
 					if (isA)
 					{
 						A.AddFace(planeId, ia, ib, ic);
+						relevantA.AddFace(a, b, c);
 					}
 					else
 					{
 						B.AddFace(planeId, ia, ib, ic);
+						relevantB.AddFace(a, b, c);
 					}
 				}
 				else
 				{
 					printf("Degenerate face in AddGeometry\n");
 				}
+			}
+
+			if (isA)
+			{
+				relevantBVHA = MakeBVH(relevantA);
+				DumpGeometry(relevant, L"relevantA.obj");
+			}
+			else
+			{
+				relevantBVHB = MakeBVH(relevantB);
+				DumpGeometry(relevant, L"relevantB.obj");
 			}
 		}
 
@@ -894,7 +920,7 @@ namespace fuzzybools
 
 		void TriangulatePlane(Geometry& geom, Plane& p)
 		{
-			// grab all contour lines
+			// grab all points on the plane
 			auto pointsOnPlane = GetPointsOnPlane(p);
 
 			// temporarily project all points for triangulation
@@ -992,6 +1018,8 @@ namespace fuzzybools
 
 			auto triangles = cdt.triangles;
 
+			//auto contourLoop = FindLargestEdgeLoop(projectedPoints, edges);
+
 			for (auto& tri : triangles)
 			{
 				size_t pointIdA = projectedPointToPoint[mapping[tri.vertices[0]]];
@@ -1001,6 +1029,27 @@ namespace fuzzybools
 				auto ptA = points[pointIdA].location3D;
 				auto ptB = points[pointIdB].location3D;
 				auto ptC = points[pointIdC].location3D;
+
+				auto pt2DA = projectedPoints[mapping[tri.vertices[0]]];
+				auto pt2DB = projectedPoints[mapping[tri.vertices[1]]];
+				auto pt2DC = projectedPoints[mapping[tri.vertices[2]]];
+
+				auto triCenter = (ptA + ptB + ptC) / 3.0;
+
+				auto posA = isInsideMesh(triCenter, glm::dvec3(0), relevantA, relevantBVHA);
+				auto posB = isInsideMesh(triCenter, glm::dvec3(0), relevantB, relevantBVHB);
+
+				if (posA.loc != MeshLocation::BOUNDARY && posB.loc != MeshLocation::BOUNDARY)
+				{
+					continue;
+				}
+
+				// although CDT is great, it spits out too many or too little tris, we fix it manually
+				//if (!IsPointInsideLoop(projectedPoints, contourLoop, triCenter))
+				//{
+					//printf("removing point outside loop\n");
+					//continue;
+				//}
 
 				// TODO: why is this swapped? winding doesnt matter much, but still
 				geom.AddFace(ptB, ptA, ptC);
@@ -1364,6 +1413,7 @@ namespace fuzzybools
 			geom.AddFace(a, b, c);
 		}
 
+		/*
 		for (auto& faceIndex : sp.B.irrelevantFaces)
 		{
 			const Face& f = sp._linkedB->GetFace(faceIndex);
@@ -1373,7 +1423,7 @@ namespace fuzzybools
 			auto c = sp._linkedB->GetPoint(f.i2);
 
 			geom.AddFace(a, b, c);
-		}
+		}*/
 
 		return geom;
 	}

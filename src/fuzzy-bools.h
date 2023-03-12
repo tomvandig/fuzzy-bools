@@ -16,6 +16,8 @@ namespace fuzzybools
 
 		auto geom = Normalize(sp);
 
+		DumpGeometry(geom, L"Post-normalize.obj");
+
 		return fuzzybools::clipSubtract(geom, bvh1, bvh2);
 	}
 
