@@ -200,6 +200,11 @@ namespace fuzzybools
 			static size_t idcounter = 0;
 			idcounter++;
 			globalID = idcounter;
+
+			if (globalID == 320 || globalID == 321)
+			{
+				printf("adsf");
+			}
 		}
 
 		double round(double input)
@@ -283,8 +288,9 @@ namespace fuzzybools
 
 		bool IsEqualTo(const glm::dvec3& n, double d)
 		{
-			return (equals(normal, n, EPS_BIG) && equals(distance, d, SCALED_EPS_BIG)) ||
-				(equals(normal, -n, EPS_BIG) && equals(distance, -d, SCALED_EPS_BIG));
+			// TODO: this EPS_BIG2 is too large, 1 mm
+			return (equals(normal, n, EPS_BIG2) && equals(distance, d, EPS_BIG2)) ||
+				(equals(normal, -n, EPS_BIG2) && equals(distance, -d, EPS_BIG2));
 		}
 
 		glm::dvec2 GetPosOnPlane(const glm::dvec3& pos)
@@ -717,7 +723,7 @@ namespace fuzzybools
 		{
 			auto boxA = A.GetAABB();
 			auto boxB = B.GetAABB();
-
+			
 			AddGeometry(A, boxB, true);
 			AddGeometry(B, boxA, false);
 
@@ -758,13 +764,15 @@ namespace fuzzybools
 				glm::dvec3 norm;
 				if (computeSafeNormal(a, b, c, norm, EPS_SMALL))
 				{
-					// norm = round(norm);
-
 					auto ia = AddPoint(a);
 					auto ib = AddPoint(b);
 					auto ic = AddPoint(c);
 
-					size_t planeId = AddPlane(norm, glm::dot(norm, a));
+					double da = glm::dot(norm, a);
+					double db = glm::dot(norm, b);
+					double dc = glm::dot(norm, c);
+
+					size_t planeId = AddPlane(norm, da);
 
 					if (!planes[planeId].IsPointOnPlane(a))
 					{

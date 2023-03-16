@@ -5,6 +5,7 @@ double EPS_MINISCULE = 1e-12; // what?
 double EPS_TINY = 1e-9;
 double EPS_SMALL = 1e-6;
 double EPS_BIG = 1e-4;
+double EPS_BIG2 = 1e-3;
 
 double SCALED_EPS_SMALL = 1e-6;
 double SCALED_EPS_BIG = 1e-4;

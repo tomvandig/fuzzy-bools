@@ -14,8 +14,8 @@ namespace fuzzybools
 
 		glm::dvec3 temp = glm::cross(v12, v13);
 
-		v12 = glm::normalize(v12);
-		v13 = glm::normalize(v13);
+		//v12 = glm::normalize(v12);
+		//v13 = glm::normalize(v13);
 
 		glm::dvec3 norm = glm::cross(v12, v13);
 
