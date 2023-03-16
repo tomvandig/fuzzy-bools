@@ -34,6 +34,7 @@ namespace fuzzybools
 
 	static void DumpGeometry(const Geometry& geom, std::wstring filename)
 	{
+		return;
 		size_t offset = 0;
 		writeFile(filename, ToObj(geom, offset));
 	}
