@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include <set>
 
-#include <glm.hpp>
+#include <glm/glm.hpp>
 
 #pragma warning( push )
 #pragma warning( disable : 4267)
