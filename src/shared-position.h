@@ -1078,7 +1078,7 @@ namespace fuzzybools
 	};
 
 
-	void AddSegments(Plane& p, SharedPosition& sp, Line& templine, const std::vector<std::pair<double, double>>& segments)
+	inline void AddSegments(Plane& p, SharedPosition& sp, Line& templine, const std::vector<std::pair<double, double>>& segments)
 	{
 		// NOTE: this is a design flaw, the addline may return a line that is
 		// EQUIVALENT BUT NOT IDENTICAL
@@ -1135,7 +1135,7 @@ namespace fuzzybools
 		}
 	}
 
-	std::vector<double> ComputeInitialIntersections(Plane& p, SharedPosition& sp, const Line& lineA)
+	inline std::vector<double> ComputeInitialIntersections(Plane& p, SharedPosition& sp, const Line& lineA)
 	{
 		double size = 10000; // TODO: this is bad
 		auto Astart = lineA.origin + lineA.direction * size;
@@ -1191,7 +1191,7 @@ namespace fuzzybools
 		return distances;
 	}
 
-	void AddLineLineIntersections(Plane& p, SharedPosition& sp, Line& lineA, Line& lineB)
+	inline void AddLineLineIntersections(Plane& p, SharedPosition& sp, Line& lineA, Line& lineB)
 	{
 		for (auto& segA : lineA.GetSegments())
 		{
@@ -1252,7 +1252,7 @@ namespace fuzzybools
 		}
 	}
 
-	void AddLineLineIsects(Plane& p, SharedPosition& sp)
+	inline void AddLineLineIsects(Plane& p, SharedPosition& sp)
 	{
 		for (size_t lineAIndex = 0; lineAIndex < p.lines.size(); lineAIndex++)
 		{
@@ -1263,7 +1263,7 @@ namespace fuzzybools
 		}
 	}
 
-	Geometry Normalize(SharedPosition& sp)
+	inline Geometry Normalize(SharedPosition& sp)
 	{
 		// construct all contours, derive lines
 		auto contoursA = sp.A.GetContourSegments();

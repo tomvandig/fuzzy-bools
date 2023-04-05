@@ -6,7 +6,7 @@
 
 namespace fuzzybools
 {
-	Geometry Subtract(const Geometry& A, const Geometry& B)
+	inline Geometry Subtract(const Geometry& A, const Geometry& B)
 	{
 		fuzzybools::SharedPosition sp;
 		sp.Construct(A, B);
@@ -21,7 +21,7 @@ namespace fuzzybools
 		return fuzzybools::clipSubtract(geom, bvh1, bvh2);
 	}
 
-	Geometry Union(const Geometry& A, const Geometry& B)
+	inline Geometry Union(const Geometry& A, const Geometry& B)
 	{
 		fuzzybools::SharedPosition sp;
 		sp.Construct(A, B);
