@@ -26,10 +26,10 @@ AllocResult Alloc(uint32_t vsizeA, uint32_t isizeA, uint32_t vsizeB, uint32_t is
 {
     // std::cout << "Alloc: " << vsizeA << std::endl;
 
-    va.resize(vsizeA, 1);
-    ia.resize(isizeA, 2);
-    vb.resize(vsizeB, 3);
-    ib.resize(isizeB, 4);
+    va.resize(vsizeA, vsizeA);
+    ia.resize(isizeA, isizeA);
+    vb.resize(vsizeB, vsizeB);
+    ib.resize(isizeB, isizeB);
 
     AllocResult result;
     result.vptr_a = (uint32_t)va.data();
