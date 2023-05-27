@@ -9,7 +9,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "setup-env": "emsdk_env",
-    "build-wasm-release": "make-dir wasm/build && cd wasm/build && emcmake cmake ../.. -DEMSCRIPTEN=true -DCMAKE_BUILD_TYPE=Release && emmake make"
+    "build-wasm-release": "make-dir wasm/build && cd wasm/build && emcmake cmake ../.. -DEMSCRIPTEN=true -DCMAKE_BUILD_TYPE=Release && emmake make && npm run copy-wasm",
+    "copy-wasm": "cpy ./wasm/build/fuzzy-bools* ./demo"
   },
   "devDependencies": {
     "cpy-cli": "^4.2.0",

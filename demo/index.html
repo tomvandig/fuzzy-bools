@@ -163,8 +163,8 @@
                     let A = ObjectToArrays(bunny, 0);
                     let B = ObjectToArrays(bunny2, 1);
 
-					scene.add( bunny );
-					scene.add( bunny2 );
+					//scene.add( bunny );
+					//scene.add( bunny2 );
 
                     let result = await DoBool(A.verts, A.indices, B.verts, B.indices);
                     
@@ -237,7 +237,7 @@
 
 			function render() {
 
-				//camera.position.x += ( mouseX - camera.position.x ) * .0005;
+				camera.position.x += ( mouseX - camera.position.x ) * .0005;
 				//camera.position.y += ( - mouseY - camera.position.y ) * .0005;
 
 				camera.lookAt( scene.position );

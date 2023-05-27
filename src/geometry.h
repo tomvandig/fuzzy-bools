@@ -8,7 +8,7 @@
 
 namespace fuzzybools
 {
-	constexpr int VERTEX_FORMAT_SIZE_FLOATS = 6;
+	constexpr int VERTEX_FORMAT_SIZE_FLOATS = 3;
 
 	struct Face
 	{
@@ -64,9 +64,9 @@ namespace fuzzybools
 			vertexData.push_back(pt.y);
 			vertexData.push_back(pt.z);
 
-			vertexData.push_back(n.x);
-			vertexData.push_back(n.y);
-			vertexData.push_back(n.z);
+			//vertexData.push_back(n.x);
+			//vertexData.push_back(n.y);
+			//vertexData.push_back(n.z);
 
 			if (std::isnan(pt.x) || std::isnan(pt.y) || std::isnan(pt.z))
 			{

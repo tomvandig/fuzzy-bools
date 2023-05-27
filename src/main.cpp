@@ -24,7 +24,7 @@ struct AllocResult
 
 AllocResult Alloc(uint32_t vsizeA, uint32_t isizeA, uint32_t vsizeB, uint32_t isizeB)
 {
-    // std::cout << "Alloc: " << vsizeA << std::endl;
+    std::cout << "Alloc: " << vsizeA << std::endl;
 
     va.resize(vsizeA, vsizeA);
     ia.resize(isizeA, isizeA);
