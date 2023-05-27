@@ -43,7 +43,7 @@
 			let windowHalfY = window.innerHeight / 2;
 
 			let object;
-            let resultingMesh = undefined;;
+            let resultingMeshes = [];
 
 			init();
 			animate();
@@ -163,9 +163,14 @@
                     let bunny2 = await LoadObj(loader, 'bunny.obj');
 
                     console.log(bunny2);
+                    resultingMeshes.push(bunny2);
+
+                    let mat = bunny2.children[0].material;
+                    mat.transparent = true;
+                    mat.opacity = 0.3;
 
                     let A = ObjectToArrays(bunny, 0, 20);
-                    let B = ObjectToArrays(bunny2, 1, 20);
+                    let B = ObjectToArrays(bunny2, 0.5, 20);
 
 					//scene.add( bunny );
 					//scene.add( bunny2 );
@@ -174,7 +179,9 @@
                     
                     let mesh = ArraysToObject(result.verts, result.indices);
 
-                    resultingMesh = mesh;
+                    resultingMeshes.push(mesh);
+
+                    scene.add(bunny2);
 
                     console.log(mesh);
 
@@ -246,10 +253,9 @@
 				//camera.rotation.y += ( mouseX - camera.position.x ) * .0005;
 				//camera.position.y += ( - mouseY - camera.position.y ) * .0005;
 
-                if (resultingMesh)
-                {
-                    resultingMesh.rotation.y += 0.01;
-                }
+                resultingMeshes.forEach((obj) => {
+                    obj.rotation.y += 0.01;
+                })
 
 				//camera.lookAt( scene.position );
 
