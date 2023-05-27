@@ -48,6 +48,9 @@ export function DoBool(wasmModule, vertsA, indicesA, vertsB, indicesB)
 
     let result = {};
     
+    floatHeap = wasmModule.HEAPF64;
+    uintHeap = wasmModule.HEAPU32;
+
     result.verts = GetVertexArray(floatHeap, ptrs.vptr, ptrs.numVertices).slice(0);
     result.indices = GetIndexArray(uintHeap, ptrs.iptr, ptrs.numIndices).slice(0);
 

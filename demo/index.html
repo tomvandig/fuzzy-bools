@@ -43,6 +43,7 @@
 			let windowHalfY = window.innerHeight / 2;
 
 			let object;
+            let resultingMesh = undefined;;
 
 			init();
 			animate();
@@ -65,7 +66,7 @@
 
 				camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, .05, 100 );
 				camera.position.z = 10;
-				camera.position.y = .2;
+				camera.position.y = 3;
 
 				// scene
 
@@ -125,10 +126,11 @@
                     return { verts, indices };
                 }
 
-                function ObjectToArrays(object, angleRad)
+                function ObjectToArrays(object, angleRad, scale)
                 {
                     let geom = object.children[0].geometry;
                     console.log(geom);
+                    geom.scale(scale, scale, scale);
                     geom.rotateY(angleRad);
                     return GeomToArrays(geom);
                 }
@@ -144,24 +146,26 @@
                     }
                     
                     geom.setAttribute( 'position', new THREE.BufferAttribute( flt32, 3 ) );
-                  //  geom.setIndex(indices);
+                    //  geom.setIndex(indices);
 
+                    geom.computeVertexNormals();
                     
-                    const material = new THREE.MeshBasicMaterial( { color: 0xff0000 } );
+                    const material = new THREE.MeshPhongMaterial( { color: 0xff0000 } );
                     const mesh = new THREE.Mesh( geom, material );
 
                     return mesh;
                 }
+
 			
                 async function loadModel() {
 
-                    let bunny = await LoadObj(loader, 'cube.obj');
-                    let bunny2 = await LoadObj(loader, 'cube.obj');
+                    let bunny = await LoadObj(loader, 'bunny.obj');
+                    let bunny2 = await LoadObj(loader, 'bunny.obj');
 
                     console.log(bunny2);
 
-                    let A = ObjectToArrays(bunny, 0);
-                    let B = ObjectToArrays(bunny2, 1);
+                    let A = ObjectToArrays(bunny, 0, 20);
+                    let B = ObjectToArrays(bunny2, 1, 20);
 
 					//scene.add( bunny );
 					//scene.add( bunny2 );
@@ -169,6 +173,8 @@
                     let result = await DoBool(A.verts, A.indices, B.verts, B.indices);
                     
                     let mesh = ArraysToObject(result.verts, result.indices);
+
+                    resultingMesh = mesh;
 
                     console.log(mesh);
 
@@ -237,10 +243,15 @@
 
 			function render() {
 
-				camera.position.x += ( mouseX - camera.position.x ) * .0005;
+				//camera.rotation.y += ( mouseX - camera.position.x ) * .0005;
 				//camera.position.y += ( - mouseY - camera.position.y ) * .0005;
 
-				camera.lookAt( scene.position );
+                if (resultingMesh)
+                {
+                    resultingMesh.rotation.y += 0.01;
+                }
+
+				//camera.lookAt( scene.position );
 
 				renderer.render( scene, camera );
 
