@@ -85,7 +85,10 @@ namespace fuzzybools
 			numPoints += 1;
 		}
 
-		inline void AddFace(glm::dvec3 a, glm::dvec3 b, glm::dvec3 c)
+
+		/// @brief Adds a face to the geometry
+		/// @return false if there was a problem with zero area triangle
+		inline bool AddFace(glm::dvec3 a, glm::dvec3 b, glm::dvec3 c)
 		{
 			glm::dvec3 normal;
 
@@ -94,37 +97,35 @@ namespace fuzzybools
 			if (!computeSafeNormal(a, b, c, normal, EPS_SMALL))
 			{
 				// bail out, zero area triangle
-				printf("zero tri");
-				return;
+				return false;
 			}
 
 			AddPoint(a, normal);
 			AddPoint(b, normal);
 			AddPoint(c, normal);
 
-			AddFace(numPoints - 3, numPoints - 2, numPoints - 1);
+			return AddFace(numPoints - 3, numPoints - 2, numPoints - 1);
 		}
 
-		inline void AddFace(uint32_t a, uint32_t b, uint32_t c)
+		/// @brief Adds a face to the geometry
+		/// @return false if there was a problem with zero area triangle
+		inline bool AddFace(uint32_t a, uint32_t b, uint32_t c)
 		{
-			//indexData.reserve((numFaces + 1) * 3);
-			//indexData[numFaces * 3 + 0] = a;
-			//indexData[numFaces * 3 + 1] = b;
-			//indexData[numFaces * 3 + 2] = c;
 			indexData.push_back(a);
 			indexData.push_back(b);
 			indexData.push_back(c);
 
 			double area = areaOfTriangle(GetPoint(a), GetPoint(b), GetPoint(c));
 
+			bool ret = true;
 			glm::dvec3 normal;
 			if (!computeSafeNormal(GetPoint(a), GetPoint(b), GetPoint(c), normal))
 			{
-				// bail out, zero area triangle
-				printf("zero tri");
+				// return a problem for zero area triangle, but still does add
+				ret = false;
 			}
-
 			numFaces++;
+			return ret;
 		}
 
 		inline Face GetFace(size_t index) const
