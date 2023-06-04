@@ -930,8 +930,9 @@ namespace fuzzybools
 			return segmentsWithoutIntersections;
 		}
 
-		void TriangulatePlane(Geometry& geom, Plane& p)
+		bool TriangulatePlane(Geometry& geom, Plane& p)
 		{
+			bool allKnown = true;
 			// grab all points on the plane
 			auto pointsOnPlane = GetPointsOnPlane(p);
 
@@ -967,7 +968,7 @@ namespace fuzzybools
 					if (pointToProjectedPoint.count(segment.first) == 0)
 					{
 						bool expectedOnPlane = p.IsPointOnPlane(points[segment.first].location3D);
-						printf("unknown point in list, repairing");
+						allKnown = false; // notifying unknown point in list, repairing
 
 						pointToProjectedPoint[segment.first] = projectedPoints.size();
 						projectedPointToPoint[projectedPoints.size()] = segment.first;
@@ -976,7 +977,7 @@ namespace fuzzybools
 					if (pointToProjectedPoint.count(segment.second) == 0)
 					{
 						bool expectedOnPlane = p.IsPointOnPlane(points[segment.second].location3D);
-						printf("unknown point in list, repairing");
+						allKnown = false; // notifying unknown point in list, repairing
 
 						pointToProjectedPoint[segment.second] = projectedPoints.size();
 						projectedPointToPoint[projectedPoints.size()] = segment.second;
@@ -1066,6 +1067,7 @@ namespace fuzzybools
 				// TODO: why is this swapped? winding doesnt matter much, but still
 				geom.AddFace(ptB, ptA, ptC);
 			}
+			return allKnown;
 		}
 
 		std::unordered_map<size_t, std::vector<size_t>> planeToLines;
