@@ -200,11 +200,6 @@ namespace fuzzybools
 			static size_t idcounter = 0;
 			idcounter++;
 			globalID = idcounter;
-
-			if (globalID == 320 || globalID == 321)
-			{
-				printf("adsf");
-			}
 		}
 
 		double round(double input)
@@ -731,8 +726,16 @@ namespace fuzzybools
 			_linkedB = &B;
 		}
 
-		void AddGeometry(const Geometry& geom, const AABB& relevantBounds, bool isA)
+		enum AddGeometryReturn
 		{
+			OK = 0, 
+			UNEXPECTED_POINT_ON_PLANE = 1 << 0,
+			DEGENERATE_FACE = 1 << 1,
+		};
+		
+		AddGeometryReturn AddGeometry(const Geometry& geom, const AABB& relevantBounds, bool isA)
+		{
+			AddGeometryReturn ret = AddGeometryReturn::OK;
 			Geometry relevant;
 
 			for (size_t i = 0; i < geom.numFaces; i++)
@@ -776,15 +779,15 @@ namespace fuzzybools
 
 					if (!planes[planeId].IsPointOnPlane(a))
 					{
-						printf("unexpected point on plane\n");
+						ret = static_cast<AddGeometryReturn>(ret | AddGeometryReturn::UNEXPECTED_POINT_ON_PLANE);
 					}
 					if (!planes[planeId].IsPointOnPlane(b))
 					{
-						printf("unexpected point on plane\n");
+						ret = static_cast<AddGeometryReturn>(ret | AddGeometryReturn::UNEXPECTED_POINT_ON_PLANE);
 					}
 					if (!planes[planeId].IsPointOnPlane(c))
 					{
-						printf("unexpected point on plane\n");
+						ret = static_cast<AddGeometryReturn>(ret | AddGeometryReturn::UNEXPECTED_POINT_ON_PLANE);
 					}
 
 					planes[planeId].AddPoint(a);
@@ -805,20 +808,21 @@ namespace fuzzybools
 				}
 				else
 				{
-					printf("Degenerate face in AddGeometry\n");
+					ret = static_cast<AddGeometryReturn>(ret | AddGeometryReturn::DEGENERATE_FACE);
 				}
 			}
 
 			if (isA)
 			{
 				relevantBVHA = MakeBVH(relevantA);
-				DumpGeometry(relevant, L"relevantA.obj");
+				// DumpGeometry(relevant, L"relevantA.obj");
 			}
 			else
 			{
 				relevantBVHB = MakeBVH(relevantB);
-				DumpGeometry(relevant, L"relevantB.obj");
+				// DumpGeometry(relevant, L"relevantB.obj");
 			}
+			return ret;
 		}
 
 		std::vector<size_t> GetPointsOnPlane(Plane& p)
