@@ -731,6 +731,7 @@ namespace fuzzybools
 			OK = 0, 
 			UNEXPECTED_POINT_ON_PLANE = 1 << 0,
 			DEGENERATE_FACE = 1 << 1,
+			ADD_FACE_ZERO_AREA = 1 << 2,
 		};
 		
 		AddGeometryReturn AddGeometry(const Geometry& geom, const AABB& relevantBounds, bool isA)
@@ -762,7 +763,8 @@ namespace fuzzybools
 				auto b = geom.GetPoint(f.i1);
 				auto c = geom.GetPoint(f.i2);
 
-				relevant.AddFace(a, b, c);
+				if (!relevant.AddFace(a, b, c))
+					ret = static_cast<AddGeometryReturn>(ret | AddGeometryReturn::ADD_FACE_ZERO_AREA);
 
 				glm::dvec3 norm;
 				if (computeSafeNormal(a, b, c, norm, EPS_SMALL))
@@ -798,12 +800,14 @@ namespace fuzzybools
 					if (isA)
 					{
 						A.AddFace(planeId, ia, ib, ic);
-						relevantA.AddFace(a, b, c);
+						if (!relevantA.AddFace(a, b, c))
+							ret = static_cast<AddGeometryReturn>(ret | AddGeometryReturn::ADD_FACE_ZERO_AREA);
 					}
 					else
 					{
 						B.AddFace(planeId, ia, ib, ic);
-						relevantB.AddFace(a, b, c);
+						if (!relevantB.AddFace(a, b, c))
+							ret = static_cast<AddGeometryReturn>(ret | AddGeometryReturn::ADD_FACE_ZERO_AREA);
 					}
 				}
 				else
@@ -1032,7 +1036,7 @@ namespace fuzzybools
 			auto triangles = cdt.triangles;
 
 			//auto contourLoop = FindLargestEdgeLoop(projectedPoints, edges);
-
+			bool areaSuccess = true;
 			for (auto& tri : triangles)
 			{
 				size_t pointIdA = projectedPointToPoint[mapping[tri.vertices[0]]];
@@ -1065,9 +1069,10 @@ namespace fuzzybools
 				//}
 
 				// TODO: why is this swapped? winding doesnt matter much, but still
-				geom.AddFace(ptB, ptA, ptC);
+				if (!geom.AddFace(ptB, ptA, ptC))
+					areaSuccess = false;
 			}
-			return allKnown;
+			return allKnown && areaSuccess;
 		}
 
 		std::unordered_map<size_t, std::vector<size_t>> planeToLines;
