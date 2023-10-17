@@ -1137,7 +1137,7 @@ namespace fuzzybools
 
 	std::vector<double> ComputeInitialIntersections(Plane& p, SharedPosition& sp, const Line& lineA)
 	{
-		double size = 10000; // TODO: this is bad
+		double size = 30000; // TODO: this is bad
 		auto Astart = lineA.origin + lineA.direction * size;
 		auto Aend = lineA.origin - lineA.direction * size;
 
