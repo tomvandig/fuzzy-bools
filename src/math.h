@@ -2,6 +2,7 @@
 
 #include <glm/glm.hpp>
 #include <vector>
+#include <stdio.h>
 
 #include "eps.h"
 
@@ -425,7 +426,7 @@ namespace fuzzybools
 		glm::dvec3 dir;
 	};
 
-	PlanePlaneIsectResult PlanePlaneIsect(const glm::dvec3& norm1, double d1, const glm::dvec3& norm2, double d2)
+	inline PlanePlaneIsectResult PlanePlaneIsect(const glm::dvec3& norm1, double d1, const glm::dvec3& norm2, double d2)
 	{
 		PlanePlaneIsectResult result;
 

@@ -1,0 +1,29 @@
+{
+  "name": "fuzzy-bools",
+  "version": "1.0.0",
+  "description": "*Warning: this is pre-alpha software, awaiting a proper benchmark. There is no guarantee of stability.*",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "setup-env": "emsdk_env",
+    "build-wasm-release": "make-dir wasm/build && cd wasm/build && emcmake cmake ../.. -DEMSCRIPTEN=true -DCMAKE_BUILD_TYPE=Release && emmake make && npm run copy-wasm",
+    "copy-wasm": "cpy ./wasm/build/fuzzy-bools* ./demo"
+  },
+  "devDependencies": {
+    "cpy-cli": "^4.2.0",
+    "make-dir-cli": "^3.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tomvandig/fuzzy-bools.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/tomvandig/fuzzy-bools/issues"
+  },
+  "homepage": "https://github.com/tomvandig/fuzzy-bools#readme"
+}

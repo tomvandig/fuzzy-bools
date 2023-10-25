@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>fuzzy-bools</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<link type="text/css" rel="stylesheet" href="main.css">
+	</head>
+
+	<body>
+		<div id="info">
+		fuzzy-bools
+		</div>
+
+		<!-- Import maps polyfill -->
+		<!-- Remove this when import maps will be widely supported -->
+		<script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+
+		<script type="importmap">
+			{
+				"imports": {
+                    "three": "https://unpkg.com/three@0.152.2/build/three.module.js",
+                    "three/addons/": "https://unpkg.com/three@0.152.2/examples/jsm/",
+                    "fuzzybools": "./test.js"
+				}
+			}
+		</script>
+
+		<script type="module">
+
+			import * as THREE from 'three';
+            import * as fuzzybools from "fuzzybools";
+
+			import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+
+			let container;
+
+			let camera, scene, renderer;
+
+			let mouseX = 0, mouseY = 0;
+
+			let windowHalfX = window.innerWidth / 2;
+			let windowHalfY = window.innerHeight / 2;
+
+			let object;
+            let resultingMeshes = [];
+
+			init();
+			animate();
+
+            async function LoadObj(loader, path)
+            {
+                return new Promise((resolve, reject) => {
+                    loader.load( path, function( obj ) {
+                        resolve(obj);
+                        object = obj;
+                    });
+                });
+            }
+
+
+			function init() {
+
+				container = document.createElement( 'div' );
+				document.body.appendChild( container );
+
+				camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, .05, 100 );
+				camera.position.z = 10;
+				camera.position.y = 3;
+
+				// scene
+
+				scene = new THREE.Scene();
+
+				const ambientLight = new THREE.AmbientLight( 0xcccccc, 0.4 );
+				scene.add( ambientLight );
+
+				const pointLight = new THREE.PointLight( 0xffffff, 0.8 );
+				camera.add( pointLight );
+				scene.add( camera );
+
+				// manager
+
+                let prev = 0;
+                function ms()
+                {
+                    let cur = new Date().getTime();
+                    let diff = cur - prev;
+                    prev = cur;
+                    return diff;
+                }
+
+				const manager = new THREE.LoadingManager( );
+              
+                async function DoBool(vertsA, indicesA, vertsB, indicesB)
+                {
+                    let mod = await fuzzybools.GetModule();
+                    console.log(mod);
+                    console.log(mod.GetVersion())
+
+                    ms();
+                    let result = fuzzybools.DoBool(mod, vertsA, indicesA, vertsB, indicesB);
+                    console.log(`Took ${ms()}ms`);
+
+                    console.log(result.verts);
+                    console.log(result.indices);
+
+                    return result;
+                }
+
+				const loader = new OBJLoader( manager );
+
+                function GeomToArrays(geom)
+                {
+                    let pos = geom.attributes.position.array;
+                    let verts = new Float64Array(pos.length);
+                    for (let i = 0; i < pos.length; i++)
+                    {
+                        verts[i] = pos[i];
+                    }
+                    let indices = new Uint32Array(pos.length / 3);
+                    for (let i = 0; i < indices.length; i++)
+                    {
+                        indices[i] = i;
+                    }
+                    return { verts, indices };
+                }
+
+                function ObjectToArrays(object, angleRad, scale)
+                {
+                    let geom = object.children[0].geometry;
+                    console.log(geom);
+                    geom.scale(scale, scale, scale);
+                    geom.rotateY(angleRad);
+                    return GeomToArrays(geom);
+                }
+
+                function ArraysToObject(verts, indices)
+                {
+                    let geom = new THREE.BufferGeometry();
+
+                    let flt32 = new Float32Array(verts.length);
+                    for (let i = 0; i < verts.length; i++)
+                    {
+                        flt32[i] = verts[i];
+                    }
+                    
+                    geom.setAttribute( 'position', new THREE.BufferAttribute( flt32, 3 ) );
+                    //  geom.setIndex(indices);
+
+                    geom.computeVertexNormals();
+                    
+                    const material = new THREE.MeshPhongMaterial( { color: 0xff0000 } );
+                    const mesh = new THREE.Mesh( geom, material );
+
+                    return mesh;
+                }
+
+			
+                async function loadModel() {
+
+                    let bunny = await LoadObj(loader, 'bunny.obj');
+                    let bunny2 = await LoadObj(loader, 'bunny.obj');
+
+                    console.log(bunny2);
+                    resultingMeshes.push(bunny2);
+
+                    let mat = bunny2.children[0].material;
+                    mat.transparent = true;
+                    mat.opacity = 0.3;
+
+                    let A = ObjectToArrays(bunny, 0, 20);
+                    let B = ObjectToArrays(bunny2, 0.5, 20);
+
+					//scene.add( bunny );
+					//scene.add( bunny2 );
+
+                    let result = await DoBool(A.verts, A.indices, B.verts, B.indices);
+                    
+                    let mesh = ArraysToObject(result.verts, result.indices);
+
+                    resultingMeshes.push(mesh);
+
+                    scene.add(bunny2);
+
+                    console.log(mesh);
+
+                    scene.add(mesh);
+                }
+
+                loadModel();
+
+
+				// model
+
+				function onProgress( xhr ) {
+
+					if ( xhr.lengthComputable ) {
+
+						const percentComplete = xhr.loaded / xhr.total * 100;
+						console.log( 'model ' + Math.round( percentComplete, 2 ) + '% downloaded' );
+
+					}
+
+				}
+
+
+				//
+
+				renderer = new THREE.WebGLRenderer();
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				container.appendChild( renderer.domElement );
+
+				document.addEventListener( 'mousemove', onDocumentMouseMove );
+
+				//
+
+				window.addEventListener( 'resize', onWindowResize );
+
+			}
+
+			function onWindowResize() {
+
+				windowHalfX = window.innerWidth / 2;
+				windowHalfY = window.innerHeight / 2;
+
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+			}
+
+			function onDocumentMouseMove( event ) {
+
+				mouseX = ( event.clientX - windowHalfX ) / 2;
+				mouseY = ( event.clientY - windowHalfY ) / 2;
+
+			}
+
+			//
+
+			function animate() {
+
+				requestAnimationFrame( animate );
+				render();
+
+			}
+
+			function render() {
+
+				//camera.rotation.y += ( mouseX - camera.position.x ) * .0005;
+				//camera.position.y += ( - mouseY - camera.position.y ) * .0005;
+
+                resultingMeshes.forEach((obj) => {
+                    obj.rotation.y += 0.01;
+                })
+
+				//camera.lookAt( scene.position );
+
+				renderer.render( scene, camera );
+
+			}
+
+		</script>
+
+	</body>
+</html>

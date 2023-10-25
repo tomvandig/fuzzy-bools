@@ -29,7 +29,7 @@ namespace fuzzybools
     };
 
     // assume points vector is non overlapping, assume id is not in loop
-    bool IsPointInsideLoop(const std::vector<glm::dvec2>& points, Loop& loop, glm::dvec2 pt)
+    inline bool IsPointInsideLoop(const std::vector<glm::dvec2>& points, Loop& loop, glm::dvec2 pt)
     {
         glm::dvec2 line(10000, 0);
 
@@ -76,7 +76,7 @@ namespace fuzzybools
     }
 
 
-    bool AInsideB(const std::vector<glm::dvec2>& points, Loop& A, Loop& B)
+    inline bool AInsideB(const std::vector<glm::dvec2>& points, Loop& A, Loop& B)
     {
         std::optional<size_t> nonSharedPoint; // point of A not in B
 
@@ -100,7 +100,7 @@ namespace fuzzybools
     }
 
 
-    Loop FindOuterLoop(const std::vector<glm::dvec2>& points, const std::set<std::pair<size_t, size_t>>& edges, bool forward)
+    inline Loop FindOuterLoop(const std::vector<glm::dvec2>& points, const std::set<std::pair<size_t, size_t>>& edges, bool forward)
     {
         Loop result;
 
@@ -184,7 +184,7 @@ namespace fuzzybools
         return result;
     }
 
-    Loop FindLargestEdgeLoop(const std::vector<glm::dvec2>& points, const std::set<std::pair<size_t, size_t>>& edges)
+    inline Loop FindLargestEdgeLoop(const std::vector<glm::dvec2>& points, const std::set<std::pair<size_t, size_t>>& edges)
     {
         auto l1 = FindOuterLoop(points, edges, false);
         auto l2 = FindOuterLoop(points, edges, true);
