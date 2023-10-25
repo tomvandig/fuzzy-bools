@@ -1137,7 +1137,17 @@ namespace fuzzybools
 
 	std::vector<double> ComputeInitialIntersections(Plane& p, SharedPosition& sp, const Line& lineA)
 	{
-		double size = 30000; // TODO: this is bad
+		double size = 10000; // TODO: this is bad
+		
+		for (auto& point : sp.points)
+		{
+			double d = glm::distance(lineA.origin, point.location3D);
+			if(size < d)
+			{
+				size = d;
+			}
+		}
+
 		auto Astart = lineA.origin + lineA.direction * size;
 		auto Aend = lineA.origin - lineA.direction * size;
 
