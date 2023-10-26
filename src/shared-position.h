@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include <set>
 
-#include <glm.hpp>
+#include <glm/glm.hpp>
 
 #pragma warning( push )
 #pragma warning( disable : 4267)
@@ -1138,6 +1138,16 @@ namespace fuzzybools
 	inline std::vector<double> ComputeInitialIntersections(Plane& p, SharedPosition& sp, const Line& lineA)
 	{
 		double size = 10000; // TODO: this is bad
+		
+		for (auto& point : sp.points)
+		{
+			double d = glm::distance(lineA.origin, point.location3D);
+			if(size < d)
+			{
+				size = d;
+			}
+		}
+
 		auto Astart = lineA.origin + lineA.direction * size;
 		auto Aend = lineA.origin - lineA.direction * size;
 

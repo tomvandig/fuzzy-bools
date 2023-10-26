@@ -1,7 +1,7 @@
 #pragma once
 
 #include <vector>
-#include <glm.hpp>
+#include <glm/glm.hpp>
 
 #include "aabb.h"
 #include "geometry.h"

@@ -2,7 +2,7 @@
 
 #include <string>
 #include <sstream>
-#include <glm.hpp>
+#include <glm/glm.hpp>
 
 #include "geometry.h"
 #include "util.h"

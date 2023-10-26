@@ -11,7 +11,7 @@
 #include <unordered_map>
 #include <optional>
 
-#include <glm.hpp>
+#include <glm/glm.hpp>
 
 #include "eps.h"
 #include "aabb.h"

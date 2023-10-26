@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <glm.hpp>
+#include <glm/glm.hpp>
 
 #include "eps.h"
 #include "math.h"
