@@ -47,11 +47,6 @@ namespace fuzzybools
 		double width = max.x - min.x;
 		double height = max.y - min.y;
 
-		if (width == 0 && height == 0)
-		{
-			printf("asdf");
-		}
-
 		return {
 			min,
 			max

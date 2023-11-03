@@ -200,11 +200,6 @@ namespace fuzzybools
 			static size_t idcounter = 0;
 			idcounter++;
 			globalID = idcounter;
-
-			if (globalID == 320 || globalID == 321)
-			{
-				printf("adsf");
-			}
 		}
 
 		double round(double input)
@@ -239,20 +234,28 @@ namespace fuzzybools
 
 			if (!lines[lineId.first].IsPointOnLine(a.location3D))
 			{
-				printf("bad point");
+#if Debug
+				printf("bad point;");
+#endif				
 			}
 			if (!lines[lineId.first].IsPointOnLine(b.location3D))
 			{
-				printf("bad point");
+#if Debug
+				printf("bad point;");
+#endif				
 			}
 
 			if (!aabb.contains(a.location3D))
 			{
-				printf("bad points");
+#if Debug
+				printf("bad points;");
+#endif				
 			}
 			if (!aabb.contains(b.location3D))
 			{
-				printf("bad points");
+#if Debug
+				printf("bad points;");
+#endif				
 			}
 
 			lines[lineId.first].AddPointToLine(lines[lineId.first].GetPosOnLine(a.location3D), a.id);
@@ -411,7 +414,9 @@ namespace fuzzybools
 		{
 			if (a == b)
 			{
-				printf("a == b on AddSegment");
+#if Debug
+				printf("a == b on AddSegment;");
+#endif				
 				return;
 			}
 
@@ -731,8 +736,17 @@ namespace fuzzybools
 			_linkedB = &B;
 		}
 
-		void AddGeometry(const Geometry& geom, const AABB& relevantBounds, bool isA)
+		enum AddGeometryReturn
 		{
+			OK = 0, 
+			UNEXPECTED_POINT_ON_PLANE = 1 << 0,
+			DEGENERATE_FACE = 1 << 1,
+			ADD_FACE_ZERO_AREA = 1 << 2,
+		};
+		
+		AddGeometryReturn AddGeometry(const Geometry& geom, const AABB& relevantBounds, bool isA)
+		{
+			AddGeometryReturn ret = AddGeometryReturn::OK;
 			Geometry relevant;
 
 			for (size_t i = 0; i < geom.numFaces; i++)
@@ -759,7 +773,8 @@ namespace fuzzybools
 				auto b = geom.GetPoint(f.i1);
 				auto c = geom.GetPoint(f.i2);
 
-				relevant.AddFace(a, b, c);
+				if (!relevant.AddFace(a, b, c))
+					ret = static_cast<AddGeometryReturn>(ret | AddGeometryReturn::ADD_FACE_ZERO_AREA);
 
 				glm::dvec3 norm;
 				if (computeSafeNormal(a, b, c, norm, EPS_SMALL))
@@ -776,15 +791,15 @@ namespace fuzzybools
 
 					if (!planes[planeId].IsPointOnPlane(a))
 					{
-						printf("unexpected point on plane\n");
+						ret = static_cast<AddGeometryReturn>(ret | AddGeometryReturn::UNEXPECTED_POINT_ON_PLANE);
 					}
 					if (!planes[planeId].IsPointOnPlane(b))
 					{
-						printf("unexpected point on plane\n");
+						ret = static_cast<AddGeometryReturn>(ret | AddGeometryReturn::UNEXPECTED_POINT_ON_PLANE);
 					}
 					if (!planes[planeId].IsPointOnPlane(c))
 					{
-						printf("unexpected point on plane\n");
+						ret = static_cast<AddGeometryReturn>(ret | AddGeometryReturn::UNEXPECTED_POINT_ON_PLANE);
 					}
 
 					planes[planeId].AddPoint(a);
@@ -795,30 +810,33 @@ namespace fuzzybools
 					if (isA)
 					{
 						A.AddFace(planeId, ia, ib, ic);
-						relevantA.AddFace(a, b, c);
+						if (!relevantA.AddFace(a, b, c))
+							ret = static_cast<AddGeometryReturn>(ret | AddGeometryReturn::ADD_FACE_ZERO_AREA);
 					}
 					else
 					{
 						B.AddFace(planeId, ia, ib, ic);
-						relevantB.AddFace(a, b, c);
+						if (!relevantB.AddFace(a, b, c))
+							ret = static_cast<AddGeometryReturn>(ret | AddGeometryReturn::ADD_FACE_ZERO_AREA);
 					}
 				}
 				else
 				{
-					printf("Degenerate face in AddGeometry\n");
+					ret = static_cast<AddGeometryReturn>(ret | AddGeometryReturn::DEGENERATE_FACE);
 				}
 			}
 
 			if (isA)
 			{
 				relevantBVHA = MakeBVH(relevantA);
-				DumpGeometry(relevant, L"relevantA.obj");
+				// DumpGeometry(relevant, L"relevantA.obj");
 			}
 			else
 			{
 				relevantBVHB = MakeBVH(relevantB);
-				DumpGeometry(relevant, L"relevantB.obj");
+				// DumpGeometry(relevant, L"relevantB.obj");
 			}
+			return ret;
 		}
 
 		std::vector<size_t> GetPointsOnPlane(Plane& p)
@@ -890,12 +908,16 @@ namespace fuzzybools
 			{
 				if (!l.IsPointOnLine(points[segment.first].location3D))
 				{
-					printf("point not on line");
+#if Debug
+					printf("point not on line;");
+#endif
 				}
 
 				if (!l.IsPointOnLine(points[segment.second].location3D))
 				{
-					printf("point not on line");
+#if Debug
+					printf("point not on line;");
+#endif					
 				}
 
 				pointsInOrder.emplace_back(segment.first, l.GetPosOnLine(points[segment.first].location3D));
@@ -926,8 +948,9 @@ namespace fuzzybools
 			return segmentsWithoutIntersections;
 		}
 
-		void TriangulatePlane(Geometry& geom, Plane& p)
+		bool TriangulatePlane(Geometry& geom, Plane& p)
 		{
+			bool allKnown = true;
 			// grab all points on the plane
 			auto pointsOnPlane = GetPointsOnPlane(p);
 
@@ -963,7 +986,7 @@ namespace fuzzybools
 					if (pointToProjectedPoint.count(segment.first) == 0)
 					{
 						bool expectedOnPlane = p.IsPointOnPlane(points[segment.first].location3D);
-						printf("unknown point in list, repairing");
+						allKnown = false; // notifying unknown point in list, repairing
 
 						pointToProjectedPoint[segment.first] = projectedPoints.size();
 						projectedPointToPoint[projectedPoints.size()] = segment.first;
@@ -972,7 +995,7 @@ namespace fuzzybools
 					if (pointToProjectedPoint.count(segment.second) == 0)
 					{
 						bool expectedOnPlane = p.IsPointOnPlane(points[segment.second].location3D);
-						printf("unknown point in list, repairing");
+						allKnown = false; // notifying unknown point in list, repairing
 
 						pointToProjectedPoint[segment.second] = projectedPoints.size();
 						projectedPointToPoint[projectedPoints.size()] = segment.second;
@@ -997,8 +1020,9 @@ namespace fuzzybools
 					{
 						edgesPrinted.push_back({ projectedPoints[e.first], projectedPoints[e.second] });
 					}
-
+#if Debug
 					DumpSVGLines(edgesPrinted, L"poly_" + std::to_wstring(line.id) + L".html");
+#endif
 				}
 			}
 
@@ -1027,7 +1051,7 @@ namespace fuzzybools
 			auto triangles = cdt.triangles;
 
 			//auto contourLoop = FindLargestEdgeLoop(projectedPoints, edges);
-
+			bool areaSuccess = true;
 			for (auto& tri : triangles)
 			{
 				size_t pointIdA = projectedPointToPoint[mapping[tri.vertices[0]]];
@@ -1060,8 +1084,10 @@ namespace fuzzybools
 				//}
 
 				// TODO: why is this swapped? winding doesnt matter much, but still
-				geom.AddFace(ptB, ptA, ptC);
+				if (!geom.AddFace(ptB, ptA, ptC))
+					areaSuccess = false;
 			}
+			return allKnown && areaSuccess;
 		}
 
 		std::unordered_map<size_t, std::vector<size_t>> planeToLines;
@@ -1090,7 +1116,9 @@ namespace fuzzybools
 
 		if (!p.IsPointOnPlane(isectLine.origin) || !p.IsPointOnPlane(isectLine.origin + isectLine.direction * 100.))
 		{
-			printf("Bad isect line");
+#if Debug
+			printf("Bad isect line;");
+#endif
 		}
 
 		for (auto& seg : segments)
@@ -1099,7 +1127,9 @@ namespace fuzzybools
 
 			if (!p.aabb.contains(pos))
 			{
-				printf("making pos outside");
+#if Debug
+				printf("making pos outside;");
+#endif
 			}
 
 			size_t ptA = sp.AddPoint(pos);
@@ -1107,11 +1137,15 @@ namespace fuzzybools
 
 			if (!p.aabb.contains(sp.points[ptA].location3D))
 			{
-				printf("bad points");
+#if Debug
+				printf("bad points;");
+#endif				
 			}
 			if (!p.aabb.contains(sp.points[ptB].location3D))
 			{
-				printf("bad points");
+#if Debug
+				printf("bad points;");
+#endif				
 			}
 
 			//if (ptA != ptB)
@@ -1122,14 +1156,16 @@ namespace fuzzybools
 
 			if (!p.IsPointOnPlane(sp.points[ptA].location3D))
 			{
-				printf("bad point");
+#if Debug
+				printf("bad point;");
+#endif				
 			}
 			if (!p.IsPointOnPlane(sp.points[ptB].location3D))
 			{
-				printf("bad point");
+#if Debug
+				printf("bad point;");
+#endif				
 			}
-
-
 			sp.AddRefPlaneToPoint(ptA, p.id);
 			sp.AddRefPlaneToPoint(ptB, p.id);
 		}
@@ -1168,11 +1204,15 @@ namespace fuzzybools
 				{
 					if (!p.aabb.contains(sp.points[seg.first].location3D))
 					{
-						printf("bad points");
+#if Debug
+						printf("bad points;");
+#endif						
 					}
 					if (!p.aabb.contains(sp.points[seg.second].location3D))
 					{
-						printf("bad points");
+#if Debug
+						printf("bad points;");
+#endif						
 					}
 
 					// intersection, mark index of line B and distance on line A
@@ -1181,12 +1221,16 @@ namespace fuzzybools
 
 					if (!p.aabb.contains(result.point2))
 					{
-						printf("bad points");
+#if Debug
+						printf("bad points;");
+#endif						
 					}
 
 					if (!equals(pt, result.point2, SCALED_EPS_BIG))
 					{
-						printf("BAD POINT");
+#if Debug
+						printf("BAD POINT;");
+#endif						
 					}
 				}
 			}
@@ -1219,7 +1263,9 @@ namespace fuzzybools
 						// intersection! Take center and insert
 						if (!p.aabb.contains(result.point1))
 						{
-							printf("bad points");
+#if Debug
+							printf("bad points;");
+#endif							
 							continue;
 						}
 
@@ -1292,8 +1338,9 @@ namespace fuzzybools
 				{
 					edges.push_back({ basis.project(sp.points[segment.first].location3D), basis.project(sp.points[segment.second].location3D) });
 				}
-
+#if Debug
 				DumpSVGLines(edges, L"contour.html");
+#endif
 			}
 
 			for (auto& segment : contours)
@@ -1365,11 +1412,15 @@ namespace fuzzybools
 
 					if (!planeA.IsPointOnPlane(intersectionLine.origin) || !planeA.IsPointOnPlane(intersectionLine.origin + intersectionLine.direction * 1000.))
 					{
-						printf("Bad isect line");
+#if Debug
+						printf("Bad isect line;");
+#endif
 					}
 					if (!planeB.IsPointOnPlane(intersectionLine.origin) || !planeB.IsPointOnPlane(intersectionLine.origin + intersectionLine.direction * 1000.))
 					{
-						printf("Bad isect line");
+#if Debug
+						printf("Bad isect line;");
+#endif						
 					}
 
 					// get all intersection points with the shared line and both planes

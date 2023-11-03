@@ -13,12 +13,15 @@
 
 namespace fuzzybools
 {
-    static void clipMesh(Geometry& source, Geometry& target, BVH& targetBVH, Geometry& result, bool invert, bool flip, bool keepBoundary)
+    // todo: cb: use return value in calling functions
+
+    /// <returns>true on success, false if there are any warnings</returns>
+    static bool clipMesh(Geometry& source, Geometry& target, BVH& targetBVH, Geometry& result, bool invert, bool flip, bool keepBoundary)
     {
         glm::dvec3 targetCenter;
         glm::dvec3 targetExtents;
         target.GetCenterExtents(targetCenter, targetExtents);
-
+        bool success = true;
         for (uint32_t i = 0; i < source.numFaces; i++)
         {
             Face tri = source.GetFace(i);
@@ -46,18 +49,24 @@ namespace fuzzybools
                 // emit triangle
                 if (flip)
                 {
-                    result.AddFace(a, c, b);
+                    if (!result.AddFace(a, c, b))
+                        success = false;
                 }
                 else
                 {
-                    result.AddFace(a, b, c);
+                    if (!result.AddFace(a, b, c))
+                        success = false;
                 }
             }
         }
+        return success;
     }
 
-    static void doubleClipSingleMesh(Geometry& mesh, BVH& bvh1, BVH& bvh2, Geometry& result)
+    // todo: cb: use return value
+    /// <returns>true if all success, false on any warning</returns>
+    static bool doubleClipSingleMesh(Geometry& mesh, BVH& bvh1, BVH& bvh2, Geometry& result)
     {
+        bool success = true;
         for (uint32_t i = 0; i < mesh.numFaces; i++)
         {
             Face tri = mesh.GetFace(i);
@@ -110,7 +119,8 @@ namespace fuzzybools
                 {
                     // normals face away from eachother, we can keep this face
                     // furthermore, since the first operand is the first added, we don't flip
-                    result.AddFace(a, b, c);
+                    if (!result.AddFace(a, b, c))
+                        success = false;
                 }
             }
             else
@@ -128,11 +138,13 @@ namespace fuzzybools
                         // we're taking the face of the second operand, but we must match the winding
                         if (glm::dot(n, isInside2Loc.normal) < 0)
                         {
-                            result.AddFace(a, b, c);
+                            if (!result.AddFace(a, b, c))
+                                success = false;
                         }
                         else
                         {
-                            result.AddFace(b, a, c);
+                            if (!result.AddFace(b, a, c))
+                                success = false;
                         }
                     }
                     else if (isInside1 == MeshLocation::BOUNDARY)
@@ -140,24 +152,30 @@ namespace fuzzybools
                         // we're taking the face of the second operand, but we must match the winding
                         if (glm::dot(n, isInside1Loc.normal) < 0)
                         {
-                            result.AddFace(b, a, c);
+                            if (!result.AddFace(b, a, c))
+                                success = false;
                         }
                         else
                         {
-                            result.AddFace(a, b, c);
+                            if (!result.AddFace(a, b, c))
+                                success = false;
                         }
                     }
                     else
                     {
-                        result.AddFace(a, b, c);
+                        if (!result.AddFace(a, b, c))
+                            success = false;
                     }
                 }
             }
         }
+        return success;
     }
 
-    static void doubleClipSingleMesh2(Geometry& mesh, BVH& bvh1, BVH& bvh2, Geometry& result)
+    // todo: cb: use return value
+    static bool doubleClipSingleMesh2(Geometry& mesh, BVH& bvh1, BVH& bvh2, Geometry& result)
     {
+        bool success = true;
         for (uint32_t i = 0; i < mesh.numFaces; i++)
         {
             Face tri = mesh.GetFace(i);
@@ -198,7 +216,8 @@ namespace fuzzybools
                 {
                     // normals face away from eachother, we can keep this face
                     // furthermore, since the first operand is the first added, we don't flip
-                    result.AddFace(a, b, c);
+                    if (!result.AddFace(a, b, c))
+                        success = false;
                 }
             }
             else if (isInside1 == MeshLocation::BOUNDARY)
@@ -206,11 +225,13 @@ namespace fuzzybools
                 // either is a boundary, keep
                 if (glm::dot(n, isInside1Loc.normal) < 0)
                 {
-                    result.AddFace(b, a, c);
+                    if (!result.AddFace(b, a, c))
+                        success = false;
                 }
                 else
                 {
-                    result.AddFace(a, b, c);
+                    if (result.AddFace(a, b, c))
+                        success = false;
                 }
             }
             else if (isInside2 == MeshLocation::BOUNDARY)
@@ -218,18 +239,22 @@ namespace fuzzybools
                 // either is a boundary, keep
                 if (glm::dot(n, isInside2Loc.normal) < 0)
                 {
-                    result.AddFace(b, a, c);
+                    if (!result.AddFace(b, a, c))
+                        success = false;
                 }
                 else
                 {
-                    result.AddFace(a, b, c);
+                    if (result.AddFace(a, b, c))
+                        success = false;
                 }
             }
             else
             {
                 // neither a boundary, neither inside, neither outside, nothing left
+                // todo: should we return false?
             }
         }
+        return success;
     }
 
     static Geometry clipJoin(Geometry& mesh, BVH bvh1, BVH bvh2)
